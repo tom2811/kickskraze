@@ -1,18 +1,25 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-background: #ffffff;
+  --color-foreground: #0a0a0a;
+  /* Reserved for a later volt-green hover pass. UI is black/white for now. */
+  --color-accent: #39ff14;
+  --color-accent-foreground: #000000;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+/* Heading font */
+.font-display {
+  font-family: var(--font-heading), system-ui, sans-serif;
 }

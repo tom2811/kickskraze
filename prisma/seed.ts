@@ -92,11 +92,20 @@ async function main() {
 
   for (const sneaker of sneakers) {
     try {
-      await prisma.product.create({
-        data: {
+      await prisma.product.upsert({
+        where: { sku: sneaker.sku },
+        update: {
+          name: sneaker.name,
+          brand: sneaker.brand,
+          colorway: sneaker.colorway,
+          retailPrice: sneaker.retailPrice,
+          description: sneaker.description,
+          images: sneaker.images,
+        },
+        create: {
           ...sneaker,
           variants: {
-            create: sizes.map(size => ({
+            create: sizes.map((size) => ({
               size,
               stock: Math.floor(Math.random() * 15) + 5,
               price: sneaker.retailPrice,

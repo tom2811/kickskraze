@@ -1,5 +1,5 @@
 {
-  "name": "kickskraze-temp",
+  "name": "kickskraze",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,13 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "dotenv -e .env.local -- tsx prisma/seed.ts"
+    "seed": "dotenv -e .env.local -- tsx prisma/seed.ts",
+    "make-admin": "dotenv -e .env.local -- tsx scripts/make-admin.ts",
+    "typecheck": "tsc --noEmit"
   },
   "prisma": {
     "seed": "dotenv -e .env.local -- tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.9.1",
     "@prisma/client": "5.22.0",
     "@stripe/stripe-js": "^10.0.0",
     "@supabase/ssr": "^0.12.7",
@@ -24,7 +25,6 @@
     "prisma": "5.22.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "react-hook-form": "^7.89.0",
     "stripe": "^23.0.0",
     "tailwind-merge": "^3.7.0",
     "zod": "^3.25.76"

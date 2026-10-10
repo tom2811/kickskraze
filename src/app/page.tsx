@@ -1,36 +1,44 @@
-import Link from 'next/link';
+import { ButtonLink } from '@/components/ui';
+import { Header } from '@/components/layout/header';
+import { redirectAdminToConsole } from '@/lib/auth';
 
-export default function Home() {
+export default async function Home() {
+  await redirectAdminToConsole();
   return (
-    <div className="min-h-screen flex flex-col">
-      <nav className="border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold">
-            KICKSKRAZE
-          </Link>
-          <div className="flex gap-8">
-            <Link href="/products" className="hover:underline">
-              Shop
-            </Link>
-            <Link href="/cart" className="hover:underline">
-              Cart
-            </Link>
+    <div className="min-h-screen flex flex-col bg-white text-black">
+      <Header />
+
+      <main className="flex-1 flex flex-col items-center justify-center px-6">
+        <div className="max-w-3xl w-full text-center space-y-8">
+          <p className="text-[10px] font-mono font-semibold uppercase tracking-[0.3em] text-black/40">
+            Premium Sneaker Marketplace
+          </p>
+
+          <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tight leading-[0.95] uppercase">
+            Find your
+            <br />
+            next grail
+          </h1>
+
+          <p className="text-base text-black/50 max-w-md mx-auto leading-relaxed">
+            Curated drops from Nike, Jordan, Adidas, and New Balance. Authenticated. Delivered.
+          </p>
+
+          <div className="flex items-center justify-center gap-4 pt-2">
+            <ButtonLink href="/products">Shop now</ButtonLink>
+            <ButtonLink href="/products?brand=Jordan" variant="secondary">
+              Jordans
+            </ButtonLink>
           </div>
         </div>
-      </nav>
-
-      <main className="flex-1 flex flex-col items-center justify-center px-4 text-center">
-        <h1 className="text-6xl font-bold mb-4">KICKSKRAZE</h1>
-        <p className="text-xl text-gray-600 mb-8 max-w-2xl">
-          Premium sneakers, unbeatable prices. Find your next grail.
-        </p>
-        <Link
-          href="/products"
-          className="px-8 py-4 bg-black text-white font-bold rounded-lg hover:bg-gray-800 transition-colors"
-        >
-          Shop Now
-        </Link>
       </main>
+
+      <footer className="border-t border-black/15">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between text-[10px] font-mono text-black/30 uppercase tracking-widest">
+          <span>&copy; 2026 Kickskraze</span>
+          <span>All rights reserved</span>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -1,23 +1,11 @@
-import Link from 'next/link';
+import { Header } from '@/components/layout/header';
+import { redirectAdminToConsole } from '@/lib/auth';
 
-export default function ShopLayout({ children }: { children: React.ReactNode }) {
+export default async function ShopLayout({ children }: { children: React.ReactNode }) {
+  await redirectAdminToConsole();
   return (
-    <div className="min-h-screen flex flex-col">
-      <nav className="border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold">
-            KICKSKRAZE
-          </Link>
-          <div className="flex gap-8">
-            <Link href="/products" className="hover:underline">
-              Shop
-            </Link>
-            <Link href="/cart" className="hover:underline">
-              Cart
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen flex flex-col bg-white text-black">
+      <Header />
       <main className="flex-1">{children}</main>
     </div>
   );

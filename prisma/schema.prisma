@@ -36,6 +36,10 @@ model Product {
   variants    Variant[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@index([brand])
+  @@index([category])
+  @@index([createdAt])
 }
 
 enum Category {
@@ -67,6 +71,7 @@ model CartItem {
   createdAt DateTime @default(now())
 
   @@unique([userId, variantId])
+  @@index([variantId])
 }
 
 model Order {
@@ -77,9 +82,12 @@ model Order {
   total           Float
   shippingAddress Json
   items           OrderItem[]
-  stripeSessionId String?
+  stripeSessionId String?     @unique
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
 }
 
 enum OrderStatus {
@@ -99,4 +107,7 @@ model OrderItem {
   variant   Variant @relation(fields: [variantId], references: [id])
   quantity  Int
   price     Float
+
+  @@index([orderId])
+  @@index([variantId])
 }

@@ -1,38 +1,47 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/auth';
+import { apiError } from '@/lib/http';
+import { catalog } from '@/modules/catalog';
+import { createProductSchema, parseBody, productQuerySchema } from '@/lib/validation';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const brand = searchParams.get('brand');
-  const category = searchParams.get('category');
-  const search = searchParams.get('search');
-
-  const where: any = {};
-
-  if (brand) where.brand = brand;
-  if (category) where.category = category;
-  if (search) {
-    where.OR = [
-      { name: { contains: search, mode: 'insensitive' } },
-      { brand: { contains: search, mode: 'insensitive' } },
-      { colorway: { contains: search, mode: 'insensitive' } },
-    ];
-  }
-
-  const products = await prisma.product.findMany({
-    where,
-    include: {
-      variants: {
-        select: {
-          id: true,
-          size: true,
-          stock: true,
-          price: true,
-        },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
+  const parsed = productQuerySchema.safeParse({
+    brand: searchParams.get('brand') || undefined,
+    category: searchParams.get('category') || undefined,
+    search: searchParams.get('search') || undefined,
+    minPrice: searchParams.get('minPrice') || undefined,
+    maxPrice: searchParams.get('maxPrice') || undefined,
+    page: searchParams.get('page') || undefined,
+    pageSize: searchParams.get('pageSize') || undefined,
   });
 
-  return NextResponse.json(products);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+  }
+
+  const { page, pageSize, ...filters } = parsed.data;
+
+  try {
+    const result = await catalog.searchProducts(filters, { page, pageSize });
+    const cacheable = !filters.search && !filters.brand && !filters.category;
+    const response = NextResponse.json(result);
+    if (cacheable) {
+      response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=120');
+    }
+    return response;
+  } catch (error) {
+    return apiError(error, 'Failed to fetch products');
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    await requireAdmin();
+    const data = parseBody(createProductSchema, await request.json());
+    const product = await catalog.createProduct(data);
+    return NextResponse.json(product, { status: 201 });
+  } catch (error) {
+    return apiError(error, 'Failed to create product');
+  }
 }
