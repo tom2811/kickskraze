@@ -1,11 +1,25 @@
 'use client';
 
-import { useAuth } from '@/lib/auth-context';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { PageHeader, PageSkeleton } from '@/components/ui';
+import { useAuth } from '@/lib/auth-context';
+import { createClient } from '@/lib/supabase';
+import { PageHeader, PageSkeleton, TextField, Button } from '@/components/ui';
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
+  const supabase = createClient();
+
+  const [editedName, setEditedName] = useState<string | null>(null);
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameSuccess, setNameSuccess] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   if (loading) {
     return <PageSkeleton />;
@@ -15,90 +29,219 @@ export default function ProfilePage() {
     return null;
   }
 
-  const userName = user.user_metadata?.name || 'User';
+  const displayName = user.user_metadata?.name || 'User';
+  const nameValue = editedName ?? (user.user_metadata?.name || '');
   const memberSince = new Date(user.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
   });
 
+  const handleUpdateName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNameSaving(true);
+    setNameSuccess(false);
+    setNameError(null);
+
+    const trimmed = nameValue.trim();
+    if (!trimmed) {
+      setNameError('Name cannot be empty.');
+      setNameSaving(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      data: { name: trimmed },
+    });
+
+    if (error) {
+      setNameError(error.message);
+    } else {
+      setNameSuccess(true);
+      setEditedName(trimmed);
+      setTimeout(() => setNameSuccess(false), 3000);
+    }
+    setNameSaving(false);
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordSaving(true);
+    setPasswordSuccess(false);
+    setPasswordError(null);
+
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters.');
+      setPasswordSaving(false);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match.');
+      setPasswordSaving(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      setPasswordError(error.message);
+    } else {
+      setPasswordSuccess(true);
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => setPasswordSuccess(false), 3000);
+    }
+    setPasswordSaving(false);
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-6 py-12">
-      <PageHeader eyebrow="Account" title="Profile" />
+      <PageHeader eyebrow="Account" title="Profile Settings" />
 
+      {/* User Summary Card */}
       <div className="bg-white border border-black p-8 mb-10">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
-          <div className="w-24 h-24 bg-black text-white flex items-center justify-center font-display font-black text-4xl flex-shrink-0 border border-black">
-            {userName.charAt(0).toUpperCase()}
+          <div className="w-20 h-20 bg-black text-white flex items-center justify-center font-display font-black text-3xl flex-shrink-0 border border-black">
+            {displayName.charAt(0).toUpperCase()}
           </div>
-          <div className="flex-1 space-y-2">
-            <h2 className="font-display text-3xl font-black uppercase">{userName}</h2>
-            <p className="font-mono text-sm uppercase tracking-widest text-black/60">{user.email}</p>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-black/40 pt-2">
+          <div className="flex-1 space-y-1">
+            <h2 className="font-display text-2xl font-black uppercase">{displayName}</h2>
+            <p className="font-mono text-sm tracking-widest uppercase text-black/60">{user.email}</p>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-black/40 pt-1">
               Member since {memberSince}
             </p>
+          </div>
+          <div>
+            <Link
+              href="/orders"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-black text-white text-[11px] font-mono font-semibold uppercase tracking-widest border border-black hover:bg-white hover:text-black transition-colors"
+            >
+              [ View Orders ]
+            </Link>
           </div>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <Link
-          href="/orders"
-          className="group bg-white border border-black/20 hover:border-black p-8 transition-colors"
-        >
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 bg-black text-white flex items-center justify-center group-hover:bg-white group-hover:text-black border border-black transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
-            <h3 className="font-display text-xl font-bold uppercase tracking-widest">Orders</h3>
-          </div>
-          <p className="font-mono text-xs text-black/60 leading-relaxed">
-            View past orders and track shipments.
+      <div className="grid md:grid-cols-2 gap-8">
+        {/* Name Settings */}
+        <section className="bg-white border border-black p-8">
+          <h3 className="font-display text-xl font-bold uppercase tracking-tight mb-2">
+            Display Name
+          </h3>
+          <p className="font-mono text-xs text-black/60 mb-6">
+            Update how your name appears on your account. Email address is read-only.
           </p>
-        </Link>
 
-        <div className="bg-white border border-black/10 p-8 opacity-50">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 bg-black/10 flex items-center justify-center">
-              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
-              </svg>
-            </div>
-            <h3 className="font-display text-xl font-bold uppercase tracking-widest">AI Chat</h3>
-          </div>
-          <p className="font-mono text-xs text-black/60 leading-relaxed uppercase tracking-widest">
-            Coming Phase 7
-          </p>
-        </div>
+          <form onSubmit={handleUpdateName} className="space-y-4">
+            <TextField
+              label="Display Name"
+              id="name"
+              name="name"
+              value={nameValue}
+              onChange={(e) => setEditedName(e.target.value)}
+              placeholder="e.g. John Doe"
+              required
+            />
 
-        <div className="bg-white border border-black/10 p-8 opacity-50">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 bg-black/10 flex items-center justify-center">
-              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
+            <div>
+              <label
+                htmlFor="email-display"
+                className="block text-[10px] font-mono uppercase tracking-widest font-bold text-black/40 mb-2"
+              >
+                Email Address
+              </label>
+              <input
+                id="email-display"
+                type="text"
+                value={user.email || ''}
+                disabled
+                className="w-full px-3 py-2.5 bg-neutral-100 text-black/60 text-sm font-mono border border-black/10 cursor-not-allowed"
+              />
             </div>
-            <h3 className="font-display text-xl font-bold uppercase tracking-widest">Addresses</h3>
-          </div>
-          <p className="font-mono text-xs text-black/60 leading-relaxed uppercase tracking-widest">
-            Coming Phase 5
-          </p>
-        </div>
 
-        <div className="bg-white border border-black/10 p-8 opacity-50">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 bg-black/10 flex items-center justify-center">
-              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
+            {nameError ? (
+              <div className="p-3 border border-red-500 bg-red-50 text-red-700 font-mono text-xs">
+                {nameError}
+              </div>
+            ) : null}
+
+            {nameSuccess ? (
+              <div className="p-3 border border-black bg-accent text-black font-mono text-xs font-bold uppercase tracking-widest">
+                Display name updated
+              </div>
+            ) : null}
+
+            <div className="pt-2">
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={nameSaving}
+              >
+                {nameSaving ? 'Saving...' : 'Save Name'}
+              </Button>
             </div>
-            <h3 className="font-display text-xl font-bold uppercase tracking-widest">Payment</h3>
-          </div>
-          <p className="font-mono text-xs text-black/60 leading-relaxed uppercase tracking-widest">
-            Coming Phase 4
+          </form>
+        </section>
+
+        {/* Password Settings */}
+        <section className="bg-white border border-black p-8">
+          <h3 className="font-display text-xl font-bold uppercase tracking-tight mb-2">
+            Change Password
+          </h3>
+          <p className="font-mono text-xs text-black/60 mb-6">
+            Ensure your account is using a long, secure password.
           </p>
-        </div>
+
+          <form onSubmit={handleUpdatePassword} className="space-y-4">
+            <TextField
+              label="New Password"
+              id="new-password"
+              name="new-password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+            />
+
+            <TextField
+              label="Confirm Password"
+              id="confirm-password"
+              name="confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+            />
+
+            {passwordError ? (
+              <div className="p-3 border border-red-500 bg-red-50 text-red-700 font-mono text-xs">
+                {passwordError}
+              </div>
+            ) : null}
+
+            {passwordSuccess ? (
+              <div className="p-3 border border-black bg-accent text-black font-mono text-xs font-bold uppercase tracking-widest">
+                Password updated successfully
+              </div>
+            ) : null}
+
+            <div className="pt-2">
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={passwordSaving}
+              >
+                {passwordSaving ? 'Updating...' : 'Update Password'}
+              </Button>
+            </div>
+          </form>
+        </section>
       </div>
     </div>
   );
