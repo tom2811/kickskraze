@@ -3,8 +3,11 @@ import { prisma } from '@/lib/prisma';
 import {
   CatalogStorage,
   CreateProductInput,
+  InventoryFilters,
+  PaginatedInventory,
   Pagination,
   ProductFilters,
+  ProductVariant,
   UpdateProductInput,
 } from '../types';
 
@@ -196,5 +199,76 @@ export class PrismaCatalogAdapter implements CatalogStorage {
 
   async deleteVariant(variantId: string) {
     await prisma.variant.delete({ where: { id: variantId } });
+  }
+
+  async listInventory(
+    filters: InventoryFilters,
+    pagination: Pagination
+  ): Promise<PaginatedInventory> {
+    const { page, pageSize } = pagination;
+    const where: Prisma.VariantWhereInput = {};
+
+    if (filters.stockStatus === 'OUT_OF_STOCK') {
+      where.stock = 0;
+    } else if (filters.stockStatus === 'LOW_STOCK') {
+      where.stock = { gt: 0, lte: 3 };
+    }
+
+    if (filters.search) {
+      const q = filters.search.trim();
+      where.product = {
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { brand: { contains: q, mode: 'insensitive' } },
+          { sku: { contains: q, mode: 'insensitive' } },
+        ],
+      };
+    }
+
+    const [total, lowStockCount, outOfStockCount, rawItems] = await prisma.$transaction([
+      prisma.variant.count({ where }),
+      prisma.variant.count({ where: { stock: { gt: 0, lte: 3 } } }),
+      prisma.variant.count({ where: { stock: 0 } }),
+      prisma.variant.findMany({
+        where,
+        select: {
+          id: true,
+          size: true,
+          stock: true,
+          price: true,
+          product: {
+            select: {
+              id: true,
+              name: true,
+              brand: true,
+              sku: true,
+              colorway: true,
+              images: true,
+            },
+          },
+        },
+        orderBy: [{ stock: 'asc' }, { product: { name: 'asc' } }, { size: 'asc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+
+    return {
+      items: rawItems,
+      total,
+      lowStockCount,
+      outOfStockCount,
+      page,
+      pageSize,
+    };
+  }
+
+  async updateVariantStock(variantId: string, stock: number): Promise<ProductVariant> {
+    if (stock < 0) throw new Error('Stock cannot be negative');
+    return prisma.variant.update({
+      where: { id: variantId },
+      data: { stock },
+      select: { id: true, size: true, stock: true, price: true },
+    });
   }
 }

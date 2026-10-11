@@ -6,6 +6,7 @@ import { AuthError, requireAdmin } from '@/lib/auth';
 const links = [
   { href: '/admin', label: 'Dashboard' },
   { href: '/admin/products', label: 'Products' },
+  { href: '/admin/inventory', label: 'Inventory' },
   { href: '/admin/orders', label: 'Orders' },
   { href: '/admin/users', label: 'Users' },
 ];

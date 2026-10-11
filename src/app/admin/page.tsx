@@ -220,12 +220,12 @@ export default function AdminDashboard() {
       <h2 className="font-display text-xl font-bold uppercase tracking-tight mb-4">
         Console Sections
       </h2>
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link
           href="/admin/orders"
-          className="group block border border-black p-8 bg-white text-black hover:bg-black hover:text-white transition-colors"
+          className="group block border border-black p-6 bg-white text-black hover:bg-black hover:text-white transition-colors"
         >
-          <h3 className="font-display text-2xl font-bold uppercase tracking-tight mb-2">
+          <h3 className="font-display text-xl font-bold uppercase tracking-tight mb-2">
             Orders
           </h3>
           <p className="font-mono text-xs leading-relaxed text-black/60 group-hover:text-white">
@@ -235,22 +235,34 @@ export default function AdminDashboard() {
 
         <Link
           href="/admin/products"
-          className="group block border border-black p-8 bg-white text-black hover:bg-black hover:text-white transition-colors"
+          className="group block border border-black p-6 bg-white text-black hover:bg-black hover:text-white transition-colors"
         >
-          <h3 className="font-display text-2xl font-bold uppercase tracking-tight mb-2">
-            Products &amp; Inventory
+          <h3 className="font-display text-xl font-bold uppercase tracking-tight mb-2">
+            Products
           </h3>
           <p className="font-mono text-xs leading-relaxed text-black/60 group-hover:text-white">
-            Create items, manage size variants, adjust pricing, update stock numbers.
+            Catalog copywriting, branding, images, colorways, and retail price points.
+          </p>
+        </Link>
+
+        <Link
+          href="/admin/inventory"
+          className="group block border border-black p-6 bg-white text-black hover:bg-black hover:text-white transition-colors"
+        >
+          <h3 className="font-display text-xl font-bold uppercase tracking-tight mb-2">
+            Inventory
+          </h3>
+          <p className="font-mono text-xs leading-relaxed text-black/60 group-hover:text-white">
+            Warehouse operations, size availability, stock adjustments, and OOS monitoring.
           </p>
         </Link>
 
         <Link
           href="/admin/users"
-          className="group block border border-black p-8 bg-white text-black hover:bg-black hover:text-white transition-colors"
+          className="group block border border-black p-6 bg-white text-black hover:bg-black hover:text-white transition-colors"
         >
-          <h3 className="font-display text-2xl font-bold uppercase tracking-tight mb-2">
-            User Roles
+          <h3 className="font-display text-xl font-bold uppercase tracking-tight mb-2">
+            Users
           </h3>
           <p className="font-mono text-xs leading-relaxed text-black/60 group-hover:text-white">
             Filter users by role, search by email, promote or demote administrators safely.

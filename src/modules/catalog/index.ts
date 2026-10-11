@@ -2,6 +2,7 @@ import { PrismaCatalogAdapter } from './adapters/prisma';
 import {
   CatalogStorage,
   CreateProductInput,
+  InventoryFilters,
   Pagination,
   ProductFilters,
   UpdateProductInput,
@@ -41,7 +42,24 @@ export class CatalogModule {
   deleteVariant(variantId: string) {
     return this.storage.deleteVariant(variantId);
   }
+
+  listInventory(filters: InventoryFilters, pagination: Pagination) {
+    return this.storage.listInventory(filters, pagination);
+  }
+
+  updateVariantStock(variantId: string, stock: number) {
+    return this.storage.updateVariantStock(variantId, stock);
+  }
 }
 
 export const catalog = new CatalogModule(new PrismaCatalogAdapter());
-export type { CreateProductInput, ProductFilters, UpdateProductInput, VariantInput, ProductVariant } from './types';
+export type {
+  CreateProductInput,
+  ProductFilters,
+  UpdateProductInput,
+  VariantInput,
+  ProductVariant,
+  InventoryItem,
+  InventoryFilters,
+  PaginatedInventory,
+} from './types';

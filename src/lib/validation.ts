@@ -112,6 +112,19 @@ export const userQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(50).default(20),
 });
 
+export const inventoryQuerySchema = z.object({
+  stockStatus: z.enum(['ALL', 'LOW_STOCK', 'OUT_OF_STOCK']).optional(),
+  search: z.string().max(100).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(30),
+});
+
+export const updateStockSchema = z
+  .object({
+    stock: z.number().int().min(0).max(1_000_000),
+  })
+  .strict();
+
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 export type ShippingAddress = z.infer<typeof shippingAddressSchema>;

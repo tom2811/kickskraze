@@ -84,4 +84,37 @@ export interface CatalogStorage {
   addVariant(productId: string, data: { size: string; price: number; stock: number }): Promise<ProductVariant>;
   updateVariant(variantId: string, data: { size?: string; price?: number; stock?: number }): Promise<ProductVariant>;
   deleteVariant(variantId: string): Promise<void>;
+  listInventory(filters: InventoryFilters, pagination: Pagination): Promise<PaginatedInventory>;
+  updateVariantStock(variantId: string, stock: number): Promise<ProductVariant>;
+}
+
+export type StockStatusFilter = 'ALL' | 'LOW_STOCK' | 'OUT_OF_STOCK';
+
+export interface InventoryFilters {
+  stockStatus?: StockStatusFilter;
+  search?: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  size: string;
+  stock: number;
+  price: number;
+  product: {
+    id: string;
+    name: string;
+    brand: string;
+    sku: string;
+    colorway: string;
+    images: string[];
+  };
+}
+
+export interface PaginatedInventory {
+  items: InventoryItem[];
+  total: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  page: number;
+  pageSize: number;
 }
