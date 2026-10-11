@@ -104,6 +104,10 @@ export class OrderingModule {
   setDefaultAddress(userId: string, addressId: string) {
     return this.storage.setDefaultAddress(userId, addressId);
   }
+
+  getDashboardMetrics() {
+    return this.storage.getDashboardMetrics();
+  }
 }
 
 export const ordering = new OrderingModule(new PrismaOrderingAdapter(), new StripePaymentAdapter());

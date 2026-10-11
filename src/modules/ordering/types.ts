@@ -50,7 +50,48 @@ export interface OrderingStorage {
   updateOrderStatus(orderId: string, status: OrderStatus): Promise<AdminOrder>;
   listAdminUsers(pagination: Pagination, filters?: UserFilters): Promise<PaginatedAdminUsers>;
   updateUserRole(targetUserId: string, actingUserId: string, newRole: 'USER' | 'ADMIN'): Promise<AdminUserItem>;
+  listAddresses(userId: string): Promise<SavedAddress[]>;
+  createAddress(userId: string, input: AddressInput): Promise<SavedAddress>;
+  updateAddress(userId: string, addressId: string, input: Partial<AddressInput>): Promise<SavedAddress>;
+  deleteAddress(userId: string, addressId: string): Promise<void>;
+  setDefaultAddress(userId: string, addressId: string): Promise<SavedAddress>;
+  getDashboardMetrics(): Promise<DashboardMetrics>;
 }
+
+export type DashboardMetrics = {
+  productCount: number;
+  orderCount: number;
+  userCount: number;
+  revenue: number;
+  aov: number;
+  recentOrders30d: number;
+  recentRevenue30d: number;
+  outOfStockVariants: number;
+  ordersByStatus: Record<OrderStatus, number>;
+};
+
+export type SavedAddress = {
+  id: string;
+  userId: string;
+  name: string;
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  isDefault: boolean;
+  createdAt: Date;
+};
+
+export type AddressInput = {
+  name: string;
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  country?: string;
+  isDefault?: boolean;
+};
 
 export type CartLine = {
   id: string;

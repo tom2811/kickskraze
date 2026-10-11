@@ -5,6 +5,7 @@ import {
   AdminOrder,
   AdminUserItem,
   CartLine,
+  DashboardMetrics,
   ORDER_STATUS_TRANSITIONS,
   OrderingStorage,
   OrderStatus,
@@ -97,21 +98,38 @@ export class PrismaOrderingAdapter implements OrderingStorage {
     cartItems: CartLine[],
     total: number
   ) {
-    return prisma.order.create({
-      data: {
-        userId,
-        total,
-        shippingAddress,
-        status: 'PENDING',
-        items: {
-          create: cartItems.map((item) => ({
-            variantId: item.variantId,
-            quantity: item.quantity,
-            price: item.variant.price,
-          })),
+    return prisma.$transaction(async (tx) => {
+      // 1. Atomically hold stock for each variant in the cart.
+      // If two concurrent buyers checkout the same last unit, the second
+      // updateMany returns count: 0 and throws "Insufficient stock".
+      for (const item of cartItems) {
+        const updated = await tx.variant.updateMany({
+          where: { id: item.variantId, stock: { gte: item.quantity } },
+          data: { stock: { decrement: item.quantity } },
+        });
+
+        if (updated.count !== 1) {
+          throw new Error('Insufficient stock');
+        }
+      }
+
+      // 2. Create the PENDING order with line items
+      return tx.order.create({
+        data: {
+          userId,
+          total,
+          shippingAddress,
+          status: 'PENDING',
+          items: {
+            create: cartItems.map((item) => ({
+              variantId: item.variantId,
+              quantity: item.quantity,
+              price: item.variant.price,
+            })),
+          },
         },
-      },
-      select: { id: true },
+        select: { id: true },
+      });
     });
   }
 
@@ -126,27 +144,18 @@ export class PrismaOrderingAdapter implements OrderingStorage {
     await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
-        include: { items: true },
       });
       if (!order) throw new Error('Order not found');
 
       if (['PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'].includes(order.status)) {
-        return;
+        return; // Idempotent: already marked as paid
       }
       if (order.status === 'CANCELLED') {
         throw new Error('Order cancelled');
       }
 
-      for (const item of order.items) {
-        const updated = await tx.variant.updateMany({
-          where: { id: item.variantId, stock: { gte: item.quantity } },
-          data: { stock: { decrement: item.quantity } },
-        });
-        if (updated.count !== 1) {
-          throw new Error('Insufficient stock');
-        }
-      }
-
+      // Stock was already reserved at checkout initiation.
+      // Transition status to PAID and clear the user's cart.
       await tx.order.update({
         where: { id: orderId },
         data: { status: 'PAID' },
@@ -156,9 +165,29 @@ export class PrismaOrderingAdapter implements OrderingStorage {
   }
 
   async cancelPendingOrder(orderId: string) {
-    await prisma.order.updateMany({
-      where: { id: orderId, status: 'PENDING' },
-      data: { status: 'CANCELLED' },
+    await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { items: true },
+      });
+
+      if (!order || order.status !== 'PENDING') {
+        return; // Only pending orders hold stock that needs releasing
+      }
+
+      // Mark order as CANCELLED
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: 'CANCELLED' },
+      });
+
+      // Restore reserved stock back to the catalog
+      for (const item of order.items) {
+        await tx.variant.update({
+          where: { id: item.variantId },
+          data: { stock: { increment: item.quantity } },
+        });
+      }
     });
   }
 
@@ -489,5 +518,94 @@ export class PrismaOrderingAdapter implements OrderingStorage {
       where: { id: addressId },
       data: { isDefault: true },
     });
+  }
+
+  async getDashboardMetrics(): Promise<DashboardMetrics> {
+    const statuses: OrderStatus[] = [
+      'PENDING',
+      'PAID',
+      'PROCESSING',
+      'SHIPPED',
+      'DELIVERED',
+      'CANCELLED',
+    ];
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [
+      productCount,
+      userCount,
+      orderCount,
+      revenueAggregate,
+      recentOrders30d,
+      recentRevenue30d,
+      outOfStockVariants,
+      ...statusCounts
+    ] = await prisma.$transaction([
+      prisma.product.count(),
+      prisma.user.count(),
+      prisma.order.count(),
+      prisma.order.aggregate({
+        where: {
+          status: { in: ['PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'] },
+        },
+        _sum: { total: true },
+      }),
+      prisma.order.count({
+        where: {
+          createdAt: { gte: thirtyDaysAgo },
+        },
+      }),
+      prisma.order.aggregate({
+        where: {
+          status: { in: ['PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'] },
+          createdAt: { gte: thirtyDaysAgo },
+        },
+        _sum: { total: true },
+      }),
+      prisma.variant.count({
+        where: { stock: 0 },
+      }),
+      ...statuses.map((status) =>
+        prisma.order.count({
+          where: { status: status as PrismaOrderStatus },
+        })
+      ),
+    ]);
+
+    const ordersByStatus: Record<OrderStatus, number> = {
+      PENDING: 0,
+      PAID: 0,
+      PROCESSING: 0,
+      SHIPPED: 0,
+      DELIVERED: 0,
+      CANCELLED: 0,
+    };
+
+    statuses.forEach((status, index) => {
+      ordersByStatus[status] = statusCounts[index] as number;
+    });
+
+    const completedOrders =
+      ordersByStatus.PAID +
+      ordersByStatus.PROCESSING +
+      ordersByStatus.SHIPPED +
+      ordersByStatus.DELIVERED;
+
+    const totalRevenue = revenueAggregate._sum.total || 0;
+    const aov = completedOrders > 0 ? totalRevenue / completedOrders : 0;
+
+    return {
+      productCount,
+      orderCount,
+      userCount,
+      revenue: totalRevenue,
+      aov,
+      recentOrders30d,
+      recentRevenue30d: recentRevenue30d._sum.total || 0,
+      outOfStockVariants,
+      ordersByStatus,
+    };
   }
 }
