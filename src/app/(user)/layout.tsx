@@ -1,8 +1,6 @@
 import { Header } from '@/components/layout/header';
-import { redirectAdminToConsole } from '@/lib/auth';
 
-export default async function UserLayout({ children }: { children: React.ReactNode }) {
-  await redirectAdminToConsole();
+export default function UserLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-white text-black">
       <Header />

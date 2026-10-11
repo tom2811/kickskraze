@@ -66,6 +66,10 @@ export class OrderingModule {
     return this.storage.getOrderForUser(userId, orderId);
   }
 
+  getOrderById(orderId: string) {
+    return this.storage.getOrderById(orderId);
+  }
+
   updateOrderStatus(orderId: string, status: OrderStatus) {
     return this.storage.updateOrderStatus(orderId, status);
   }

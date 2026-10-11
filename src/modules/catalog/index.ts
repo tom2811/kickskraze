@@ -29,7 +29,19 @@ export class CatalogModule {
   deleteProduct(id: string) {
     return this.storage.deleteProduct(id);
   }
+
+  addVariant(productId: string, data: { size: string; price: number; stock: number }) {
+    return this.storage.addVariant(productId, data);
+  }
+
+  updateVariant(variantId: string, data: { size?: string; price?: number; stock?: number }) {
+    return this.storage.updateVariant(variantId, data);
+  }
+
+  deleteVariant(variantId: string) {
+    return this.storage.deleteVariant(variantId);
+  }
 }
 
 export const catalog = new CatalogModule(new PrismaCatalogAdapter());
-export type { CreateProductInput, ProductFilters, UpdateProductInput } from './types';
+export type { CreateProductInput, ProductFilters, UpdateProductInput, VariantInput, ProductVariant } from './types';

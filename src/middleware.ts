@@ -54,16 +54,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && isAdmin) {
-    const allowed =
-      pathname.startsWith('/admin') ||
-      pathname.startsWith('/api') ||
-      pathname.startsWith('/login');
-    if (!allowed) {
-      return NextResponse.redirect(new URL('/admin', request.url));
-    }
-  }
-
   if (isAdminOnlyPath(pathname) && user && !isAdmin) {
     return NextResponse.redirect(new URL('/', request.url));
   }
@@ -81,10 +71,6 @@ export async function middleware(request: NextRequest) {
 
   if (isAuthRoute && user) {
     return NextResponse.redirect(new URL(isAdmin ? '/admin' : '/', request.url));
-  }
-
-  if (user && isAdmin && isStorePath(pathname)) {
-    return NextResponse.redirect(new URL('/admin', request.url));
   }
 
   return supabaseResponse;

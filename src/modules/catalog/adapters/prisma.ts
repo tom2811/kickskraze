@@ -90,39 +90,111 @@ export class PrismaCatalogAdapter implements CatalogStorage {
   }
 
   async createProduct(data: CreateProductInput) {
-    return prisma.product.create({
-      data: {
-        name: data.name,
-        sku: data.sku,
-        brand: data.brand,
-        category: data.category,
-        colorway: data.colorway,
-        retailPrice: data.retailPrice,
-        description: data.description,
-        images: data.images ?? [],
-      },
-      select: listSelect,
+    return prisma.$transaction(async (tx) => {
+      const product = await tx.product.create({
+        data: {
+          name: data.name,
+          sku: data.sku,
+          brand: data.brand,
+          category: data.category,
+          colorway: data.colorway,
+          retailPrice: data.retailPrice,
+          description: data.description,
+          images: data.images ?? [],
+          ...(data.variants && data.variants.length > 0
+            ? {
+                variants: {
+                  create: data.variants.map((v) => ({
+                    size: v.size,
+                    price: v.price,
+                    stock: v.stock,
+                  })),
+                },
+              }
+            : {}),
+        },
+        select: listSelect,
+      });
+      return product;
     });
   }
 
   async updateProduct(id: string, data: UpdateProductInput) {
-    return prisma.product.update({
-      where: { id },
-      data: {
-        ...(data.name !== undefined ? { name: data.name } : {}),
-        ...(data.sku !== undefined ? { sku: data.sku } : {}),
-        ...(data.brand !== undefined ? { brand: data.brand } : {}),
-        ...(data.category !== undefined ? { category: data.category } : {}),
-        ...(data.colorway !== undefined ? { colorway: data.colorway } : {}),
-        ...(data.retailPrice !== undefined ? { retailPrice: data.retailPrice } : {}),
-        ...(data.description !== undefined ? { description: data.description } : {}),
-        ...(data.images !== undefined ? { images: data.images } : {}),
-      },
-      select: listSelect,
+    return prisma.$transaction(async (tx) => {
+      if (data.variants !== undefined) {
+        const existing = await tx.variant.findMany({ where: { productId: id } });
+        const existingIds = new Set(existing.map((v) => v.id));
+        const inputIds = new Set(data.variants.map((v) => v.id).filter(Boolean));
+
+        const toDelete = existing.filter((v) => !inputIds.has(v.id));
+        if (toDelete.length > 0) {
+          await tx.variant.deleteMany({
+            where: { id: { in: toDelete.map((v) => v.id) } },
+          });
+        }
+
+        for (const v of data.variants) {
+          if (v.id && existingIds.has(v.id)) {
+            await tx.variant.update({
+              where: { id: v.id },
+              data: { size: v.size, price: v.price, stock: v.stock },
+            });
+          } else {
+            await tx.variant.upsert({
+              where: { productId_size: { productId: id, size: v.size } },
+              update: { price: v.price, stock: v.stock },
+              create: { productId: id, size: v.size, price: v.price, stock: v.stock },
+            });
+          }
+        }
+      }
+
+      return tx.product.update({
+        where: { id },
+        data: {
+          ...(data.name !== undefined ? { name: data.name } : {}),
+          ...(data.sku !== undefined ? { sku: data.sku } : {}),
+          ...(data.brand !== undefined ? { brand: data.brand } : {}),
+          ...(data.category !== undefined ? { category: data.category } : {}),
+          ...(data.colorway !== undefined ? { colorway: data.colorway } : {}),
+          ...(data.retailPrice !== undefined ? { retailPrice: data.retailPrice } : {}),
+          ...(data.description !== undefined ? { description: data.description } : {}),
+          ...(data.images !== undefined ? { images: data.images } : {}),
+        },
+        select: listSelect,
+      });
     });
   }
 
   async deleteProduct(id: string) {
     await prisma.product.delete({ where: { id } });
+  }
+
+  async addVariant(productId: string, data: { size: string; price: number; stock: number }) {
+    return prisma.variant.create({
+      data: {
+        productId,
+        size: data.size,
+        price: data.price,
+        stock: data.stock,
+      },
+      select: { id: true, size: true, stock: true, price: true },
+    });
+  }
+
+  async updateVariant(variantId: string, data: { size?: string; price?: number; stock?: number }) {
+    return prisma.variant.update({
+      where: { id: variantId },
+      data: {
+        ...(data.size !== undefined ? { size: data.size } : {}),
+        ...(data.price !== undefined ? { price: data.price } : {}),
+        ...(data.stock !== undefined ? { stock: data.stock } : {}),
+      },
+      select: { id: true, size: true, stock: true, price: true },
+    });
+  }
+
+  async deleteVariant(variantId: string) {
+    await prisma.variant.delete({ where: { id: variantId } });
   }
 }

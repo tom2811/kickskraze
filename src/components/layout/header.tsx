@@ -6,7 +6,7 @@ export function Header({ mode = 'store' }: { mode?: 'store' | 'admin' }) {
   const homeHref = mode === 'admin' ? '/admin' : '/';
 
   return (
-    <nav className="border-b border-black/15 bg-white text-black">
+    <header className="sticky top-0 z-50 border-b border-black/15 bg-white text-black">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <Link href={homeHref} className="font-display text-lg font-bold tracking-[0.15em] uppercase">
           Kicks<span className="font-extrabold">kraze</span>
@@ -24,6 +24,6 @@ export function Header({ mode = 'store' }: { mode?: 'store' | 'admin' }) {
           <UserMenu mode={mode} />
         </div>
       </div>
-    </nav>
+    </header>
   );
 }

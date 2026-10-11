@@ -15,6 +15,17 @@ type AdminProduct = {
   images: string[];
 };
 
+type ProductVariant = {
+  id?: string;
+  size: string;
+  price: number;
+  stock: number;
+};
+
+type ProductDetail = AdminProduct & {
+  variants: ProductVariant[];
+};
+
 const emptyForm = {
   name: '',
   sku: '',
@@ -23,6 +34,7 @@ const emptyForm = {
   colorway: '',
   retailPrice: '',
   imageUrl: '',
+  variants: [] as ProductVariant[],
 };
 
 const PAGE_SIZE = 20;
@@ -36,6 +48,12 @@ export default function AdminProducts() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState(emptyForm);
   const [refresh, setRefresh] = useState(0);
+
+  // New variant inputs
+  const [newSize, setNewSize] = useState('');
+  const [newPrice, setNewPrice] = useState('');
+  const [newStock, setNewStock] = useState('5');
+  const [variantError, setVariantError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,11 +87,20 @@ export default function AdminProducts() {
   const openCreateModal = () => {
     setEditingProduct(null);
     setFormData(emptyForm);
+    setNewSize('');
+    setNewPrice('');
+    setNewStock('5');
+    setVariantError(null);
     setIsModalOpen(true);
   };
 
-  const openEditModal = (product: AdminProduct) => {
+  const openEditModal = async (product: AdminProduct) => {
     setEditingProduct(product);
+    setNewSize('');
+    setNewPrice('');
+    setNewStock('5');
+    setVariantError(null);
+
     setFormData({
       name: product.name,
       sku: product.sku,
@@ -82,8 +109,75 @@ export default function AdminProducts() {
       colorway: product.colorway,
       retailPrice: product.retailPrice.toString(),
       imageUrl: product.images[0] ?? '',
+      variants: [],
     });
     setIsModalOpen(true);
+
+    // Fetch full details with variants
+    try {
+      const full = await apiFetch<ProductDetail>(
+        `/api/products/${product.id}`,
+        undefined,
+        'Failed to fetch product details'
+      );
+      if (full?.variants) {
+        setFormData((prev) => ({
+          ...prev,
+          variants: full.variants,
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddVariant = () => {
+    setVariantError(null);
+    const size = newSize.trim();
+    if (!size) {
+      setVariantError('Size is required');
+      return;
+    }
+
+    if (formData.variants.some((v) => v.size.toLowerCase() === size.toLowerCase())) {
+      setVariantError(`Size ${size} already exists`);
+      return;
+    }
+
+    const price = newPrice ? parseFloat(newPrice) : parseFloat(formData.retailPrice) || 0;
+    if (isNaN(price) || price <= 0) {
+      setVariantError('Price must be greater than 0');
+      return;
+    }
+
+    const stock = parseInt(newStock, 10);
+    if (isNaN(stock) || stock < 0) {
+      setVariantError('Stock cannot be negative');
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      variants: [...prev.variants, { size, price, stock }],
+    }));
+
+    setNewSize('');
+    setNewPrice('');
+    setNewStock('5');
+  };
+
+  const handleRemoveVariant = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      variants: prev.variants.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleUpdateVariantStock = (index: number, stock: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      variants: prev.variants.map((v, i) => (i === index ? { ...v, stock: Math.max(0, stock) } : v)),
+    }));
   };
 
   const deleteProduct = async (id: string) => {
@@ -109,6 +203,12 @@ export default function AdminProducts() {
       colorway: formData.colorway,
       retailPrice: parseFloat(formData.retailPrice),
       images: imageUrl ? [imageUrl] : [],
+      variants: formData.variants.map((v) => ({
+        ...(v.id ? { id: v.id } : {}),
+        size: v.size,
+        price: v.price,
+        stock: v.stock,
+      })),
     };
 
     try {
@@ -149,14 +249,14 @@ export default function AdminProducts() {
                 <ProductImage src={product.images[0]} alt="" className="object-contain" />
               </div>
               <div>
-              <h3 className="font-display text-xl font-bold uppercase tracking-tight">
-                {product.name}
-              </h3>
-              <div className="flex flex-wrap gap-2 mt-2 font-mono text-[10px] uppercase tracking-widest">
-                <span className="bg-black text-white px-2 py-1">{product.sku}</span>
-                <span className="border border-black px-2 py-1">{product.brand}</span>
-                <span className="border border-black px-2 py-1">${product.retailPrice}</span>
-              </div>
+                <h3 className="font-display text-xl font-bold uppercase tracking-tight">
+                  {product.name}
+                </h3>
+                <div className="flex flex-wrap gap-2 mt-2 font-mono text-[10px] uppercase tracking-widest">
+                  <span className="bg-black text-white px-2 py-1">{product.sku}</span>
+                  <span className="border border-black px-2 py-1">{product.brand}</span>
+                  <span className="border border-black px-2 py-1">${product.retailPrice}</span>
+                </div>
               </div>
             </div>
             <div className="flex gap-2 w-full md:w-auto">
@@ -238,6 +338,123 @@ export default function AdminProducts() {
                 />
               </div>
             </div>
+
+            {/* Variants Section */}
+            <div className="border-t border-black/15 pt-6">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-display text-lg font-bold uppercase tracking-tight">
+                  Sizes & Inventory ({formData.variants.length})
+                </h4>
+                <span className="font-mono text-[10px] text-black/40 uppercase tracking-widest">
+                  Variants make this product buyable
+                </span>
+              </div>
+
+              {/* Add Variant Sub-form */}
+              <div className="bg-neutral-50 border border-black/15 p-4 mb-4">
+                <div className="text-[10px] font-mono uppercase tracking-widest font-bold text-black/40 mb-3">
+                  Add Size Variant
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase tracking-widest font-bold text-black/40 mb-1">
+                      Size
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 10.5"
+                      value={newSize}
+                      onChange={(e) => setNewSize(e.target.value)}
+                      className="w-full px-3 py-2 bg-white text-black text-xs font-mono border border-black/20 focus:outline-none focus:border-black"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase tracking-widest font-bold text-black/40 mb-1">
+                      Price ($)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder={formData.retailPrice || 'Retail'}
+                      value={newPrice}
+                      onChange={(e) => setNewPrice(e.target.value)}
+                      className="w-full px-3 py-2 bg-white text-black text-xs font-mono border border-black/20 focus:outline-none focus:border-black"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase tracking-widest font-bold text-black/40 mb-1">
+                      Stock
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newStock}
+                      onChange={(e) => setNewStock(e.target.value)}
+                      className="w-full px-3 py-2 bg-white text-black text-xs font-mono border border-black/20 focus:outline-none focus:border-black"
+                    />
+                  </div>
+                  <div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="w-full h-[34px]"
+                      onClick={handleAddVariant}
+                    >
+                      + Add Size
+                    </Button>
+                  </div>
+                </div>
+                {variantError && (
+                  <p className="font-mono text-xs text-red-600 mt-2">{variantError}</p>
+                )}
+              </div>
+
+              {/* Variants Table/List */}
+              {formData.variants.length > 0 ? (
+                <div className="border border-black/15 max-h-48 overflow-y-auto divide-y divide-black/10">
+                  {formData.variants.map((v, idx) => (
+                    <div
+                      key={v.id ?? `${v.size}-${idx}`}
+                      className="px-4 py-2 flex items-center justify-between text-xs font-mono bg-white"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="bg-black text-white px-2 py-0.5 text-[10px] font-bold">
+                          US {v.size}
+                        </span>
+                        <span className="text-black/60">${v.price.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] uppercase text-black/40">Stock:</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={v.stock}
+                            onChange={(e) =>
+                              handleUpdateVariantStock(idx, parseInt(e.target.value, 10) || 0)
+                            }
+                            className="w-16 px-1.5 py-0.5 border border-black/20 text-center text-xs"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveVariant(idx)}
+                          className="text-[10px] font-bold uppercase text-red-600 hover:text-red-900"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[10px] font-mono uppercase tracking-widest text-black/40 italic">
+                  No sizes added yet. Use the form above to add purchasable sizes.
+                </p>
+              )}
+            </div>
+
             <div className="flex justify-end gap-2 pt-4 border-t border-black/15">
               <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
                 Cancel

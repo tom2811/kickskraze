@@ -58,19 +58,22 @@ export function UserMenu({ mode = 'store' }: { mode?: 'store' | 'admin' }) {
         <>
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
           <div className="absolute right-0 mt-1 w-40 bg-white border border-black z-20 text-xs tracking-widest font-mono">
+            <Link href="/profile" onClick={() => setIsOpen(false)} className={itemClass}>
+              Profile
+            </Link>
             {mode === 'store' && (
-              <>
-                <Link href="/profile" onClick={() => setIsOpen(false)} className={itemClass}>
-                  Profile
-                </Link>
-                <Link href="/orders" onClick={() => setIsOpen(false)} className={itemClass}>
-                  Orders
-                </Link>
-              </>
+              <Link href="/orders" onClick={() => setIsOpen(false)} className={itemClass}>
+                Orders
+              </Link>
             )}
             {isAdmin && mode === 'store' && (
               <Link href="/admin" onClick={() => setIsOpen(false)} className={`${itemClass} font-bold`}>
                 Admin
+              </Link>
+            )}
+            {mode === 'admin' && (
+              <Link href="/" onClick={() => setIsOpen(false)} className={itemClass}>
+                View Store
               </Link>
             )}
             <button

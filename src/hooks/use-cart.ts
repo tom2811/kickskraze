@@ -38,11 +38,15 @@ export function useCart() {
 
   const addToCart = useMutation({
     mutationFn: ({ variantId, quantity = 1 }: { variantId: string; quantity?: number }) =>
-      apiFetch('/api/cart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ variantId, quantity }),
-      }, 'Failed to add to cart'),
+      apiFetch(
+        '/api/cart',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ variantId, quantity }),
+        },
+        'Failed to add to cart'
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
     },
@@ -50,12 +54,41 @@ export function useCart() {
 
   const updateQuantity = useMutation({
     mutationFn: ({ itemId, quantity }: { itemId: string; quantity: number }) =>
-      apiFetch(`/api/cart/${itemId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity }),
-      }, 'Failed to update quantity'),
-    onSuccess: () => {
+      apiFetch(
+        `/api/cart/${itemId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quantity }),
+        },
+        'Failed to update quantity'
+      ),
+    onMutate: async ({ itemId, quantity }) => {
+      await queryClient.cancelQueries({ queryKey: ['cart'] });
+      const previousCart = queryClient.getQueryData<Cart>(['cart']);
+
+      if (previousCart) {
+        const nextItems = previousCart.items.map((item) =>
+          item.id === itemId ? { ...item, quantity } : item
+        );
+        const nextTotal = nextItems.reduce(
+          (sum, item) => sum + item.variant.price * item.quantity,
+          0
+        );
+        queryClient.setQueryData<Cart>(['cart'], {
+          items: nextItems,
+          total: nextTotal,
+        });
+      }
+
+      return { previousCart };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousCart) {
+        queryClient.setQueryData(['cart'], context.previousCart);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
     },
   });
@@ -63,7 +96,30 @@ export function useCart() {
   const removeItem = useMutation({
     mutationFn: (itemId: string) =>
       apiFetch(`/api/cart/${itemId}`, { method: 'DELETE' }, 'Failed to remove item'),
-    onSuccess: () => {
+    onMutate: async (itemId: string) => {
+      await queryClient.cancelQueries({ queryKey: ['cart'] });
+      const previousCart = queryClient.getQueryData<Cart>(['cart']);
+
+      if (previousCart) {
+        const nextItems = previousCart.items.filter((item) => item.id !== itemId);
+        const nextTotal = nextItems.reduce(
+          (sum, item) => sum + item.variant.price * item.quantity,
+          0
+        );
+        queryClient.setQueryData<Cart>(['cart'], {
+          items: nextItems,
+          total: nextTotal,
+        });
+      }
+
+      return { previousCart };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousCart) {
+        queryClient.setQueryData(['cart'], context.previousCart);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
     },
   });

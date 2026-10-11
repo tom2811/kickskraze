@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useState } from 'react';
+import { toast } from 'sonner';
 import { useProduct } from '@/hooks/use-products';
 import { useCart } from '@/hooks/use-cart';
 import { ProductImage } from '@/components/ui';
@@ -10,17 +11,15 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const { data: product, isLoading } = useProduct(id);
   const { addToCart } = useCart();
   const [selectedSize, setSelectedSize] = useState<string>();
-  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleAddToCart = async () => {
     if (!selectedVariant) return;
 
     try {
       await addToCart.mutateAsync({ variantId: selectedVariant.id, quantity: 1 });
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
+      toast.success(`ADDED TO CART // SIZE ${selectedVariant.size}`);
     } catch {
-      // Mutation error renders under the button.
+      // Mutation error renders under the button or via error toast.
     }
   };
 
@@ -75,9 +74,16 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
           )}
 
           <div className="mb-10">
-            <h3 className="text-[10px] font-mono uppercase tracking-widest font-bold text-black/50 mb-4">
-              Select Size
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[10px] font-mono uppercase tracking-widest font-bold text-black/50">
+                Select Size
+              </h3>
+              {selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock <= 3 && (
+                <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-amber-600 bg-amber-50 border border-amber-300 px-2 py-0.5">
+                  [ Only {selectedVariant.stock} left in stock ]
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-4 gap-2">
               {product.variants.map((variant) => (
                 <button
@@ -85,12 +91,20 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                   onClick={() => setSelectedSize(variant.size)}
                   disabled={variant.stock === 0}
                   className={`
-                    py-3 border font-mono text-sm font-bold transition-colors
+                    relative py-3 border font-mono text-sm font-bold transition-colors
                     ${selectedSize === variant.size ? 'border-black bg-black text-white' : 'border-black/20 bg-white text-black hover:border-black'}
                     ${variant.stock === 0 ? 'opacity-30 cursor-not-allowed line-through hover:border-black/20' : ''}
                   `}
                 >
                   {variant.size}
+                  {variant.stock > 0 && variant.stock <= 3 && (
+                    <span
+                      className={`absolute top-1 right-1 w-1.5 h-1.5 ${
+                        selectedSize === variant.size ? 'bg-amber-400' : 'bg-amber-500'
+                      }`}
+                      title={`Only ${variant.stock} left`}
+                    />
+                  )}
                 </button>
               ))}
             </div>
@@ -110,11 +124,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               : 'Add to Cart'}
           </button>
 
-          {showSuccess && (
-            <div className="mt-4 p-4 border border-black bg-black text-white font-mono text-xs font-bold uppercase tracking-widest text-center">
-              Added to cart
-            </div>
-          )}
+
 
           {addToCart.isError && (
             <div className="mt-4 p-4 border border-red-500 bg-red-50 text-red-700 font-mono text-xs font-bold uppercase tracking-widest text-center">

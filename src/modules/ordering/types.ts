@@ -46,6 +46,7 @@ export interface OrderingStorage {
   listOrders(userId: string, pagination: Pagination): Promise<PaginatedOrders>;
   listAdminOrders(pagination: Pagination): Promise<PaginatedAdminOrders>;
   getOrderForUser(userId: string, orderId: string): Promise<CustomerOrder | null>;
+  getOrderById(orderId: string): Promise<AdminOrderDetail | null>;
   updateOrderStatus(orderId: string, status: OrderStatus): Promise<AdminOrder>;
 }
 
@@ -82,6 +83,30 @@ export type CustomerOrder = {
     variant: {
       size: string;
       product: {
+        name: string;
+        brand: string;
+        colorway: string;
+        images: string[];
+      };
+    };
+  }>;
+};
+
+export type AdminOrderDetail = {
+  id: string;
+  total: number;
+  status: OrderStatus;
+  createdAt: Date;
+  shippingAddress: ShippingAddress;
+  user: { id: string; email: string };
+  items: Array<{
+    id: string;
+    quantity: number;
+    price: number;
+    variant: {
+      size: string;
+      product: {
+        id: string;
         name: string;
         brand: string;
         colorway: string;

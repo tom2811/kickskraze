@@ -1,9 +1,7 @@
 import { ButtonLink } from '@/components/ui';
 import { Header } from '@/components/layout/header';
-import { redirectAdminToConsole } from '@/lib/auth';
 
-export default async function Home() {
-  await redirectAdminToConsole();
+export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-black">
       <Header />

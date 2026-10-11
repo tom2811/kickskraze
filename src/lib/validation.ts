@@ -17,6 +17,13 @@ export function parseBody<T>(schema: z.ZodType<T>, data: unknown): T {
 
 const categoryEnum = z.enum(['SNEAKERS', 'APPAREL', 'ACCESSORIES']);
 
+export const variantInputSchema = z.object({
+  id: z.string().optional(),
+  size: z.string().min(1).max(20),
+  price: z.number().positive().max(1_000_000),
+  stock: z.number().int().min(0).max(1_000_000),
+});
+
 export const createProductSchema = z
   .object({
     name: z.string().min(1).max(200),
@@ -27,6 +34,7 @@ export const createProductSchema = z
     retailPrice: z.number().positive().max(1_000_000),
     description: z.string().max(5000).optional(),
     images: z.array(z.string().url()).max(10).optional(),
+    variants: z.array(variantInputSchema).optional(),
   })
   .strict();
 

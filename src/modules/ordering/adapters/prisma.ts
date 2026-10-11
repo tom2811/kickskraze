@@ -251,6 +251,40 @@ export class PrismaOrderingAdapter implements OrderingStorage {
     return { ...order, shippingAddress: order.shippingAddress as ShippingAddress };
   }
 
+  async getOrderById(orderId: string) {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        total: true,
+        status: true,
+        createdAt: true,
+        shippingAddress: true,
+        user: { select: { id: true, email: true } },
+        items: {
+          select: {
+            id: true,
+            quantity: true,
+            price: true,
+            variant: {
+              select: {
+                size: true,
+                product: {
+                  select: { id: true, name: true, brand: true, colorway: true, images: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!order) return null;
+    return {
+      ...order,
+      shippingAddress: order.shippingAddress as ShippingAddress,
+    };
+  }
+
   async updateOrderStatus(orderId: string, status: OrderStatus): Promise<AdminOrder> {
     const order = await prisma.order.findUnique({ where: { id: orderId } });
     if (!order) throw new Error('Order not found');
