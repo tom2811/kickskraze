@@ -11,6 +11,7 @@ const CLIENT_ERROR_STATUS: Record<string, number> = {
   'Cart item not found': 404,
   'Order not found': 404,
   'User not found': 404,
+  'Address not found': 404,
 };
 
 export function apiError(error: unknown, fallback = 'Internal Server Error') {

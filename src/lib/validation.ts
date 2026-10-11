@@ -64,6 +64,14 @@ export const shippingAddressSchema = z
   })
   .strict();
 
+export const addressInputSchema = shippingAddressSchema
+  .extend({
+    isDefault: z.boolean().optional(),
+  })
+  .strict();
+
+export const updateAddressSchema = addressInputSchema.partial().strict();
+
 export const checkoutSchema = z
   .object({
     shippingAddress: shippingAddressSchema,

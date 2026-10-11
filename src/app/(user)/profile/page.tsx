@@ -113,12 +113,18 @@ export default function ProfilePage() {
               Member since {memberSince}
             </p>
           </div>
-          <div>
+          <div className="flex flex-wrap gap-2">
             <Link
               href="/orders"
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-black text-white text-[11px] font-mono font-semibold uppercase tracking-widest border border-black hover:bg-white hover:text-black transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-black text-white text-[11px] font-mono font-semibold uppercase tracking-widest border border-black hover:bg-white hover:text-black transition-colors"
             >
-              [ View Orders ]
+              [ Orders ]
+            </Link>
+            <Link
+              href="/addresses"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-black text-[11px] font-mono font-semibold uppercase tracking-widest border border-black hover:bg-black hover:text-white transition-colors"
+            >
+              [ Addresses ]
             </Link>
           </div>
         </div>

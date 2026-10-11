@@ -1,10 +1,12 @@
 import { PrismaOrderingAdapter } from './adapters/prisma';
 import { StripePaymentAdapter } from './adapters/stripe';
 import {
+  AddressInput,
   OrderingStorage,
   OrderStatus,
   Pagination,
   PaymentGateway,
+  SavedAddress,
   ShippingAddress,
   UserFilters,
 } from './types';
@@ -81,6 +83,26 @@ export class OrderingModule {
 
   updateUserRole(targetUserId: string, actingUserId: string, newRole: 'USER' | 'ADMIN') {
     return this.storage.updateUserRole(targetUserId, actingUserId, newRole);
+  }
+
+  listAddresses(userId: string) {
+    return this.storage.listAddresses(userId);
+  }
+
+  createAddress(userId: string, input: AddressInput) {
+    return this.storage.createAddress(userId, input);
+  }
+
+  updateAddress(userId: string, addressId: string, input: Partial<AddressInput>) {
+    return this.storage.updateAddress(userId, addressId, input);
+  }
+
+  deleteAddress(userId: string, addressId: string) {
+    return this.storage.deleteAddress(userId, addressId);
+  }
+
+  setDefaultAddress(userId: string, addressId: string) {
+    return this.storage.setDefaultAddress(userId, addressId);
   }
 }
 

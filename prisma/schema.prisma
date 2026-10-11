@@ -8,13 +8,31 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  role      Role     @default(USER)
+  id        String    @id @default(uuid())
+  email     String    @unique
+  role      Role      @default(USER)
   orders    Order[]
   cart      CartItem[]
+  addresses Address[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  street    String
+  city      String
+  state     String
+  zip       String
+  country   String   @default("US")
+  isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 enum Role {
