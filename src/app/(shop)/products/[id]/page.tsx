@@ -19,8 +19,8 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
       await addToCart.mutateAsync({ variantId: selectedVariant.id, quantity: 1 });
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
-    } catch (error) {
-      console.error('Add to cart failed:', error);
+    } catch {
+      // Mutation error renders under the button.
     }
   };
 
@@ -54,7 +54,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     <div className="max-w-7xl mx-auto px-6 py-12">
       <div className="grid md:grid-cols-2 gap-12 lg:gap-24">
         <div className="relative aspect-square bg-neutral-50 border border-black/10 overflow-hidden p-8">
-          <ProductImage src={product.images[0]} alt={product.name} sizes="(max-width: 768px) 100vw, 50vw" />
+          <ProductImage src={product.images[0]} alt={product.name} />
         </div>
 
         <div className="flex flex-col">

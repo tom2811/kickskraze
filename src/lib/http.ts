@@ -2,14 +2,14 @@ import { NextResponse } from 'next/server';
 import { AuthError, authErrorResponse } from '@/lib/auth';
 import { ValidationError } from '@/lib/validation';
 
-const SAFE_CLIENT_ERRORS = new Set([
-  'Cart is empty',
-  'Insufficient stock',
-  'Variant not found',
-  'Cart item not found',
-  'Invalid status transition',
-  'Order not found',
-]);
+const CLIENT_ERROR_STATUS: Record<string, number> = {
+  'Cart is empty': 400,
+  'Insufficient stock': 400,
+  'Variant not found': 400,
+  'Invalid status transition': 400,
+  'Cart item not found': 404,
+  'Order not found': 404,
+};
 
 export function apiError(error: unknown, fallback = 'Internal Server Error') {
   const auth = authErrorResponse(error);
@@ -20,15 +20,11 @@ export function apiError(error: unknown, fallback = 'Internal Server Error') {
   }
 
   if (error instanceof Error) {
-    if (error.message === 'Order not found' || error.message === 'Cart item not found') {
-      return NextResponse.json({ error: error.message }, { status: 404 });
-    }
-    if (error.message === 'Insufficient stock' || error.message.startsWith('Insufficient stock')) {
-      return NextResponse.json({ error: 'Insufficient stock' }, { status: 400 });
-    }
-    if (SAFE_CLIENT_ERRORS.has(error.message)) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
+    const message = error.message.startsWith('Insufficient stock')
+      ? 'Insufficient stock'
+      : error.message;
+    const status = CLIENT_ERROR_STATUS[message];
+    if (status) return NextResponse.json({ error: message }, { status });
   }
 
   console.error(error);

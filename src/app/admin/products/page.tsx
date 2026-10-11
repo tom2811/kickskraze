@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button, Modal, PageHeader, PageSkeleton, Pager, ProductImage, TextField, SelectField } from '@/components/ui';
+import { apiFetch } from '@/lib/api-client';
 
 type AdminProduct = {
   id: string;
@@ -41,9 +42,11 @@ export default function AdminProducts() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/products?page=${page}&pageSize=${PAGE_SIZE}`);
-        if (!res.ok) throw new Error('Failed to fetch products');
-        const data = await res.json();
+        const data = await apiFetch<{ items?: AdminProduct[]; total?: number }>(
+          `/api/products?page=${page}&pageSize=${PAGE_SIZE}`,
+          undefined,
+          'Failed to fetch products'
+        );
         if (cancelled) return;
         const items = Array.isArray(data.items) ? data.items : [];
         const nextTotal = typeof data.total === 'number' ? data.total : 0;
@@ -86,8 +89,7 @@ export default function AdminProducts() {
   const deleteProduct = async (id: string) => {
     if (!confirm('Delete this product? This cannot be undone.')) return;
     try {
-      const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete product');
+      await apiFetch(`/api/products/${id}`, { method: 'DELETE' }, 'Failed to delete product');
       setRefresh((n) => n + 1);
     } catch (err) {
       console.error(err);
@@ -110,12 +112,15 @@ export default function AdminProducts() {
     };
 
     try {
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Failed to save product');
+      await apiFetch(
+        url,
+        {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        'Failed to save product'
+      );
       setIsModalOpen(false);
       setRefresh((n) => n + 1);
     } catch (err) {

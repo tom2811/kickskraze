@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ButtonLink, PageHeader, PageSkeleton, ProductImage, StatusBadge } from '@/components/ui';
@@ -58,11 +59,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const fetchOrder = async () => {
     try {
-      const res = await fetch(`/api/orders/${id}`);
-      if (!res.ok) {
-        throw new Error('Order not found');
-      }
-      const data = await res.json();
+      const data = await apiFetch<Order>(`/api/orders/${id}`, undefined, 'Order not found');
       setOrder(data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Order not found');
@@ -155,11 +152,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           {order.items.map((item) => (
             <div key={item.id} className="p-8 flex flex-col sm:flex-row gap-6">
               <div className="relative w-24 h-24 bg-neutral-50 border border-black flex-shrink-0 p-3">
-                <ProductImage
-                  src={item.variant.product.images[0]}
-                  alt={item.variant.product.name}
-                  sizes="96px"
-                />
+                <ProductImage src={item.variant.product.images[0]} alt={item.variant.product.name} />
               </div>
               <div className="flex-1 flex flex-col justify-center">
                 <h4 className="font-display text-xl font-bold uppercase">{item.variant.product.brand}</h4>

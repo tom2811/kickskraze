@@ -6,7 +6,6 @@ export function ProductImage({
   src?: string | null;
   alt: string;
   className?: string;
-  sizes?: string;
 }) {
   if (!src) {
     return (

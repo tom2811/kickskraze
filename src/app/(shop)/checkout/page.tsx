@@ -1,13 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/api-client';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/lib/auth-context';
 import { Button, ButtonLink, PageHeader, PageSkeleton, SelectField, TextField } from '@/components/ui';
 
 export default function CheckoutPage() {
-  const router = useRouter();
   const { items, total, isLoading } = useCart();
   const { user, loading: authLoading } = useAuth();
   const [processing, setProcessing] = useState(false);
@@ -28,24 +27,21 @@ export default function CheckoutPage() {
     setProcessing(true);
 
     try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shippingAddress }),
-      });
+      const data = await apiFetch<{ url?: string }>(
+        '/api/checkout',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ shippingAddress }),
+        },
+        'Checkout failed'
+      );
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Checkout failed');
-      }
-
-      // Redirect to Stripe Checkout
       if (data.url) {
         window.location.href = data.url;
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Checkout failed');
       setProcessing(false);
     }
   };

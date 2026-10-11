@@ -31,8 +31,8 @@ export function LoginForm() {
       const session = sessionRes.ok ? await sessionRes.json() : { role: 'USER' };
       router.push(session.role === 'ADMIN' ? '/admin' : '/');
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign in');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to sign in');
     } finally {
       setLoading(false);
     }

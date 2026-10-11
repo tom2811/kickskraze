@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 
 type CartItem = {
@@ -30,59 +31,38 @@ export function useCart() {
 
   const { data, isLoading } = useQuery<Cart>({
     queryKey: ['cart'],
-    queryFn: async () => {
-      const res = await fetch('/api/cart');
-      if (!res.ok) throw new Error('Failed to fetch cart');
-      return res.json();
-    },
+    queryFn: () => apiFetch<Cart>('/api/cart', undefined, 'Failed to fetch cart'),
     enabled: !!user,
     staleTime: 30 * 1000,
   });
 
   const addToCart = useMutation({
-    mutationFn: async ({ variantId, quantity = 1 }: { variantId: string; quantity?: number }) => {
-      const res = await fetch('/api/cart', {
+    mutationFn: ({ variantId, quantity = 1 }: { variantId: string; quantity?: number }) =>
+      apiFetch('/api/cart', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ variantId, quantity }),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to add to cart');
-      }
-      return res.json();
-    },
+      }, 'Failed to add to cart'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
     },
   });
 
   const updateQuantity = useMutation({
-    mutationFn: async ({ itemId, quantity }: { itemId: string; quantity: number }) => {
-      const res = await fetch(`/api/cart/${itemId}`, {
+    mutationFn: ({ itemId, quantity }: { itemId: string; quantity: number }) =>
+      apiFetch(`/api/cart/${itemId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity }),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to update quantity');
-      }
-      return res.json();
-    },
+      }, 'Failed to update quantity'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
     },
   });
 
   const removeItem = useMutation({
-    mutationFn: async (itemId: string) => {
-      const res = await fetch(`/api/cart/${itemId}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) throw new Error('Failed to remove item');
-      return res.json();
-    },
+    mutationFn: (itemId: string) =>
+      apiFetch(`/api/cart/${itemId}`, { method: 'DELETE' }, 'Failed to remove item'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
     },

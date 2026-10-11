@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { EmptyState, PageHeader, PageSkeleton, Pager, ProductImage, StatusBadge } from '@/components/ui';
 
@@ -41,13 +42,14 @@ export default function OrdersPage() {
     const fetchOrders = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/orders?page=${page}&pageSize=${PAGE_SIZE}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (cancelled) return;
-          setOrders(Array.isArray(data.items) ? data.items : []);
-          setTotal(typeof data.total === 'number' ? data.total : 0);
-        }
+        const data = await apiFetch<{ items?: Order[]; total?: number }>(
+          `/api/orders?page=${page}&pageSize=${PAGE_SIZE}`,
+          undefined,
+          'Failed to fetch orders'
+        );
+        if (cancelled) return;
+        setOrders(Array.isArray(data.items) ? data.items : []);
+        setTotal(typeof data.total === 'number' ? data.total : 0);
       } catch (error) {
         console.error('Failed to fetch orders:', error);
       } finally {
@@ -114,11 +116,7 @@ export default function OrdersPage() {
                     key={idx}
                     className="relative w-16 h-16 bg-neutral-50 border border-black overflow-hidden p-2"
                   >
-                    <ProductImage
-                      src={item.variant.product.images[0]}
-                      alt={item.variant.product.name}
-                      sizes="64px"
-                    />
+                    <ProductImage src={item.variant.product.images[0]} alt={item.variant.product.name} />
                   </div>
                 ))}
                 {order.items.length > 3 && (

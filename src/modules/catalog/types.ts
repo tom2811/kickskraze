@@ -67,14 +67,6 @@ export interface PaginatedProducts {
 export interface CatalogStorage {
   searchProducts(filters: ProductFilters, pagination: Pagination): Promise<PaginatedProducts>;
   getById(id: string): Promise<ProductDetail | null>;
-  getAvailability(sku: string, size: string): Promise<{
-    available: boolean;
-    reason?: string;
-    stock?: number;
-    price?: number;
-    productName?: string;
-    brand?: string;
-  }>;
   createProduct(data: CreateProductInput): Promise<ProductListItem>;
   updateProduct(id: string, data: UpdateProductInput): Promise<ProductListItem>;
   deleteProduct(id: string): Promise<void>;

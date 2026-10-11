@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { ButtonLink, ORDER_STATUSES, PageHeader, PageSkeleton, Pager, SelectField } from '@/components/ui';
@@ -44,19 +45,19 @@ export default function AdminOrdersPage() {
     const fetchOrders = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/admin/orders?page=${page}&pageSize=${PAGE_SIZE}`);
-        if (res.status === 403) {
-          if (!cancelled) setError('Access denied. Admin privileges required.');
-          return;
-        }
-        if (!res.ok) throw new Error('Failed to fetch orders');
-
-        const data = await res.json();
+        const data = await apiFetch<{ items?: Order[]; total?: number }>(
+          `/api/admin/orders?page=${page}&pageSize=${PAGE_SIZE}`,
+          undefined,
+          'Failed to fetch orders'
+        );
         if (cancelled) return;
         setOrders(Array.isArray(data.items) ? data.items : []);
         setTotal(typeof data.total === 'number' ? data.total : 0);
       } catch (err: unknown) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to fetch orders');
+        if (!cancelled) {
+          const message = err instanceof Error ? err.message : 'Failed to fetch orders';
+          setError(message === 'Forbidden' ? 'Access denied. Admin privileges required.' : message);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -71,15 +72,15 @@ export default function AdminOrdersPage() {
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     setUpdatingOrder(orderId);
     try {
-      const res = await fetch(`/api/admin/orders/${orderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!res.ok) throw new Error('Failed to update order');
-
-      const updatedOrder = await res.json();
+      const updatedOrder = await apiFetch<Order>(
+        `/api/admin/orders/${orderId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus }),
+        },
+        'Failed to update order'
+      );
       setOrders(orders.map((o) => (o.id === orderId ? updatedOrder : o)));
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Failed to update order');

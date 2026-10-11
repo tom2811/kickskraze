@@ -48,8 +48,8 @@ export function RegisterForm() {
       await fetch('/api/session');
       router.push('/');
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || 'Failed to create account');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create account');
     } finally {
       setLoading(false);
     }

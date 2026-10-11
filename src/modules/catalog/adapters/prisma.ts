@@ -19,6 +19,22 @@ const listSelect = {
   category: true,
 } satisfies Prisma.ProductSelect;
 
+function compareSizes(a: string, b: string) {
+  const key = (size: string) => {
+    const match = /^(\d+(?:\.\d+)?)(.*)$/.exec(size.trim());
+    return match ? { n: Number(match[1]), rest: match[2] } : null;
+  };
+  const left = key(a);
+  const right = key(b);
+  if (left && right) {
+    if (left.n !== right.n) return left.n - right.n;
+    return left.rest.localeCompare(right.rest);
+  }
+  if (left) return -1;
+  if (right) return 1;
+  return a.localeCompare(b);
+}
+
 function productWhere(filters: ProductFilters): Prisma.ProductWhereInput {
   const where: Prisma.ProductWhereInput = {};
   if (filters.brand) where.brand = filters.brand;
@@ -55,7 +71,7 @@ export class PrismaCatalogAdapter implements CatalogStorage {
   }
 
   async getById(id: string) {
-    return prisma.product.findUnique({
+    const product = await prisma.product.findUnique({
       where: { id },
       select: {
         ...listSelect,
@@ -63,26 +79,13 @@ export class PrismaCatalogAdapter implements CatalogStorage {
         releaseDate: true,
         variants: {
           select: { id: true, size: true, stock: true, price: true },
-          orderBy: { size: 'asc' },
         },
       },
     });
-  }
-
-  async getAvailability(sku: string, size: string) {
-    const product = await prisma.product.findUnique({
-      where: { sku },
-      include: { variants: { where: { size } } },
-    });
-    if (!product) return { available: false, reason: 'Product not found' };
-    const variant = product.variants[0];
-    if (!variant) return { available: false, reason: 'Size not found' };
+    if (!product) return null;
     return {
-      available: variant.stock > 0,
-      stock: variant.stock,
-      price: variant.price,
-      productName: product.name,
-      brand: product.brand,
+      ...product,
+      variants: [...product.variants].sort((a, b) => compareSizes(a.size, b.size)),
     };
   }
 

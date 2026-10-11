@@ -18,10 +18,6 @@ export class CatalogModule {
     return this.storage.getById(id);
   }
 
-  getAvailability(sku: string, size: string) {
-    return this.storage.getAvailability(sku, size);
-  }
-
   createProduct(data: CreateProductInput) {
     return this.storage.createProduct(data);
   }
