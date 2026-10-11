@@ -91,6 +91,19 @@ export const orderQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(50).default(20),
 });
 
+export const userRoleSchema = z
+  .object({
+    role: z.enum(['USER', 'ADMIN']),
+  })
+  .strict();
+
+export const userQuerySchema = z.object({
+  role: z.enum(['USER', 'ADMIN']).optional(),
+  search: z.string().max(100).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+});
+
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 export type ShippingAddress = z.infer<typeof shippingAddressSchema>;

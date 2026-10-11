@@ -6,6 +6,7 @@ import {
   Pagination,
   PaymentGateway,
   ShippingAddress,
+  UserFilters,
 } from './types';
 
 export class OrderingModule {
@@ -72,6 +73,14 @@ export class OrderingModule {
 
   updateOrderStatus(orderId: string, status: OrderStatus) {
     return this.storage.updateOrderStatus(orderId, status);
+  }
+
+  listAdminUsers(pagination: Pagination, filters?: UserFilters) {
+    return this.storage.listAdminUsers(pagination, filters);
+  }
+
+  updateUserRole(targetUserId: string, actingUserId: string, newRole: 'USER' | 'ADMIN') {
+    return this.storage.updateUserRole(targetUserId, actingUserId, newRole);
   }
 }
 

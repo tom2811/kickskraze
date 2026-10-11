@@ -18,10 +18,14 @@ const cards = [
     title: 'Products',
     description: 'Create, edit, and delete products in the catalog',
   },
+  {
+    href: '/admin/users',
+    title: 'Users',
+    description: 'Manage user accounts and assign roles',
+  },
 ];
 
 const upcoming = [
-  { title: 'Users', description: 'Coming later' },
   { title: 'Analytics', description: 'Coming later' },
   { title: 'Revenue', description: 'Coming later' },
 ];

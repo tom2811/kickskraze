@@ -48,6 +48,8 @@ export interface OrderingStorage {
   getOrderForUser(userId: string, orderId: string): Promise<CustomerOrder | null>;
   getOrderById(orderId: string): Promise<AdminOrderDetail | null>;
   updateOrderStatus(orderId: string, status: OrderStatus): Promise<AdminOrder>;
+  listAdminUsers(pagination: Pagination, filters?: UserFilters): Promise<PaginatedAdminUsers>;
+  updateUserRole(targetUserId: string, actingUserId: string, newRole: 'USER' | 'ADMIN'): Promise<AdminUserItem>;
 }
 
 export type CartLine = {
@@ -135,6 +137,27 @@ export type PaginatedOrders = {
 export type PaginatedAdminOrders = {
   items: AdminOrder[];
   total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type AdminUserItem = {
+  id: string;
+  email: string;
+  role: 'USER' | 'ADMIN';
+  createdAt: Date;
+};
+
+export type UserFilters = {
+  role?: 'USER' | 'ADMIN';
+  search?: string;
+};
+
+export type PaginatedAdminUsers = {
+  items: AdminUserItem[];
+  total: number;
+  adminCount: number;
+  userCount: number;
   page: number;
   pageSize: number;
 };

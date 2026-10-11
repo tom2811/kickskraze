@@ -1,13 +1,16 @@
-import { OrderStatus as PrismaOrderStatus } from '@prisma/client';
+import { OrderStatus as PrismaOrderStatus, Prisma, Role as PrismaRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import {
   AdminOrder,
+  AdminUserItem,
   CartLine,
   ORDER_STATUS_TRANSITIONS,
   OrderingStorage,
   OrderStatus,
+  PaginatedAdminUsers,
   Pagination,
   ShippingAddress,
+  UserFilters,
 } from '../types';
 
 const cartInclude = {
@@ -306,5 +309,80 @@ export class PrismaOrderingAdapter implements OrderingStorage {
         items: { select: { quantity: true } },
       },
     });
+  }
+
+  async listAdminUsers(
+    pagination: Pagination,
+    filters?: UserFilters
+  ): Promise<PaginatedAdminUsers> {
+    const { page, pageSize } = pagination;
+    const where: Prisma.UserWhereInput = {};
+
+    if (filters?.role) {
+      where.role = filters.role as PrismaRole;
+    }
+
+    if (filters?.search) {
+      where.email = { contains: filters.search.trim(), mode: 'insensitive' };
+    }
+
+    const [total, adminCount, userCount, items] = await prisma.$transaction([
+      prisma.user.count({ where }),
+      prisma.user.count({ where: { role: 'ADMIN' } }),
+      prisma.user.count({ where: { role: 'USER' } }),
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+
+    return {
+      items: items.map((user) => ({
+        ...user,
+        role: user.role as 'USER' | 'ADMIN',
+      })),
+      total,
+      adminCount,
+      userCount,
+      page,
+      pageSize,
+    };
+  }
+
+  async updateUserRole(
+    targetUserId: string,
+    actingUserId: string,
+    newRole: 'USER' | 'ADMIN'
+  ): Promise<AdminUserItem> {
+    if (targetUserId === actingUserId && newRole !== 'ADMIN') {
+      throw new Error('Cannot remove own admin role');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: targetUserId } });
+    if (!user) throw new Error('User not found');
+
+    const updated = await prisma.user.update({
+      where: { id: targetUserId },
+      data: { role: newRole as PrismaRole },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+
+    return {
+      ...updated,
+      role: updated.role as 'USER' | 'ADMIN',
+    };
   }
 }

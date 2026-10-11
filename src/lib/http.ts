@@ -7,8 +7,10 @@ const CLIENT_ERROR_STATUS: Record<string, number> = {
   'Insufficient stock': 400,
   'Variant not found': 400,
   'Invalid status transition': 400,
+  'Cannot remove own admin role': 400,
   'Cart item not found': 404,
   'Order not found': 404,
+  'User not found': 404,
 };
 
 export function apiError(error: unknown, fallback = 'Internal Server Error') {
