@@ -44,17 +44,10 @@ export interface OrderingStorage {
   fulfillPaidOrder(orderId: string): Promise<void>;
   cancelPendingOrder(orderId: string): Promise<void>;
   listOrders(userId: string, pagination: Pagination): Promise<PaginatedOrders>;
-  listAdminOrders(pagination: Pagination): Promise<PaginatedAdminOrders>;
+  listAdminOrders(pagination: Pagination, filters?: AdminOrderFilters): Promise<PaginatedAdminOrders>;
   getOrderForUser(userId: string, orderId: string): Promise<CustomerOrder | null>;
   getOrderById(orderId: string): Promise<AdminOrderDetail | null>;
   updateOrderStatus(orderId: string, status: OrderStatus): Promise<AdminOrder>;
-  listAdminUsers(pagination: Pagination, filters?: UserFilters): Promise<PaginatedAdminUsers>;
-  updateUserRole(targetUserId: string, actingUserId: string, newRole: 'USER' | 'ADMIN'): Promise<AdminUserItem>;
-  listAddresses(userId: string): Promise<SavedAddress[]>;
-  createAddress(userId: string, input: AddressInput): Promise<SavedAddress>;
-  updateAddress(userId: string, addressId: string, input: Partial<AddressInput>): Promise<SavedAddress>;
-  deleteAddress(userId: string, addressId: string): Promise<void>;
-  setDefaultAddress(userId: string, addressId: string): Promise<SavedAddress>;
   getDashboardMetrics(): Promise<DashboardMetrics>;
 }
 
@@ -68,29 +61,6 @@ export type DashboardMetrics = {
   recentRevenue30d: number;
   outOfStockVariants: number;
   ordersByStatus: Record<OrderStatus, number>;
-};
-
-export type SavedAddress = {
-  id: string;
-  userId: string;
-  name: string;
-  street: string;
-  city: string;
-  state: string;
-  zip: string;
-  country: string;
-  isDefault: boolean;
-  createdAt: Date;
-};
-
-export type AddressInput = {
-  name: string;
-  street: string;
-  city: string;
-  state: string;
-  zip: string;
-  country?: string;
-  isDefault?: boolean;
 };
 
 export type CartLine = {
@@ -175,30 +145,20 @@ export type PaginatedOrders = {
   pageSize: number;
 };
 
-export type PaginatedAdminOrders = {
-  items: AdminOrder[];
-  total: number;
-  page: number;
-  pageSize: number;
-};
+export type OrderQueueFilter = 'ALL' | 'ACTIONABLE' | 'DELIVERED' | 'CANCELLED';
 
-export type AdminUserItem = {
-  id: string;
-  email: string;
-  role: 'USER' | 'ADMIN';
-  createdAt: Date;
-};
-
-export type UserFilters = {
-  role?: 'USER' | 'ADMIN';
+export type AdminOrderFilters = {
+  queue?: OrderQueueFilter;
+  status?: OrderStatus;
   search?: string;
 };
 
-export type PaginatedAdminUsers = {
-  items: AdminUserItem[];
+export type PaginatedAdminOrders = {
+  items: AdminOrder[];
   total: number;
-  adminCount: number;
-  userCount: number;
+  actionableCount: number;
+  deliveredCount: number;
+  cancelledCount: number;
   page: number;
   pageSize: number;
 };

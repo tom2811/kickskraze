@@ -9,6 +9,9 @@ export async function GET(request: NextRequest) {
     await requireAdmin();
     const { searchParams } = request.nextUrl;
     const parsed = orderQuerySchema.safeParse({
+      queue: searchParams.get('queue') || undefined,
+      status: searchParams.get('status') || undefined,
+      search: searchParams.get('search') || undefined,
       page: searchParams.get('page') || undefined,
       pageSize: searchParams.get('pageSize') || undefined,
     });
@@ -16,7 +19,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    const result = await ordering.listAdminOrders(parsed.data);
+    const { page, pageSize, ...filters } = parsed.data;
+    const result = await ordering.listAdminOrders({ page, pageSize }, filters);
     return NextResponse.json(result);
   } catch (error) {
     return apiError(error, 'Failed to fetch orders');

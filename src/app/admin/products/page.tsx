@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Button, Modal, PageHeader, PageSkeleton, Pager, ProductImage, TextField, SelectField } from '@/components/ui';
 import { apiFetch } from '@/lib/api-client';
 
@@ -259,7 +260,13 @@ export default function AdminProducts() {
                 </div>
               </div>
             </div>
-            <div className="flex gap-2 w-full md:w-auto">
+            <div className="flex gap-2 w-full md:w-auto items-center">
+              <Link
+                href={`/admin/inventory?search=${encodeURIComponent(product.sku)}`}
+                className="px-3 py-1.5 border border-black font-mono text-[11px] font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-colors"
+              >
+                [ Stock &rarr; ]
+              </Link>
               <Button variant="secondary" size="sm" className="flex-1 md:flex-none" onClick={() => openEditModal(product)}>
                 Edit
               </Button>

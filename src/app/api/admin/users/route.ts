@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { apiError } from '@/lib/http';
 import { userQuerySchema } from '@/lib/validation';
-import { ordering } from '@/modules/ordering';
+import { identity } from '@/modules/identity';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { page, pageSize, ...filters } = parsed.data;
-    const result = await ordering.listAdminUsers({ page, pageSize }, filters);
+    const result = await identity.listAdminUsers({ page, pageSize }, filters);
     return NextResponse.json(result);
   } catch (error) {
     return apiError(error, 'Failed to fetch users');

@@ -95,6 +95,11 @@ export const productQuerySchema = z.object({
 });
 
 export const orderQuerySchema = z.object({
+  queue: z.enum(['ALL', 'ACTIONABLE', 'DELIVERED', 'CANCELLED']).optional(),
+  status: z
+    .enum(['PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'])
+    .optional(),
+  search: z.string().max(100).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(20),
 });

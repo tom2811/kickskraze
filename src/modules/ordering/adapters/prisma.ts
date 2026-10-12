@@ -1,19 +1,15 @@
-import { OrderStatus as PrismaOrderStatus, Prisma, Role as PrismaRole } from '@prisma/client';
+import { OrderStatus as PrismaOrderStatus, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import {
-  AddressInput,
   AdminOrder,
-  AdminUserItem,
+  AdminOrderFilters,
   CartLine,
   DashboardMetrics,
   ORDER_STATUS_TRANSITIONS,
   OrderingStorage,
   OrderStatus,
-  PaginatedAdminUsers,
   Pagination,
-  SavedAddress,
   ShippingAddress,
-  UserFilters,
 } from '../types';
 
 const cartInclude = {
@@ -235,24 +231,59 @@ export class PrismaOrderingAdapter implements OrderingStorage {
     };
   }
 
-  async listAdminOrders(pagination: Pagination) {
-    const [total, items] = await prisma.$transaction([
-      prisma.order.count(),
-      prisma.order.findMany({
-        select: {
-          id: true,
-          total: true,
-          status: true,
-          createdAt: true,
-          user: { select: { id: true, email: true } },
-          items: { select: { quantity: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (pagination.page - 1) * pagination.pageSize,
-        take: pagination.pageSize,
-      }),
-    ]);
-    return { items, total, page: pagination.page, pageSize: pagination.pageSize };
+  async listAdminOrders(pagination: Pagination, filters?: AdminOrderFilters) {
+    const { page, pageSize } = pagination;
+    const where: Prisma.OrderWhereInput = {};
+
+    if (filters?.queue === 'ACTIONABLE') {
+      where.status = { in: ['PAID', 'PROCESSING', 'SHIPPED'] };
+    } else if (filters?.queue === 'DELIVERED') {
+      where.status = 'DELIVERED';
+    } else if (filters?.queue === 'CANCELLED') {
+      where.status = { in: ['CANCELLED', 'PENDING'] };
+    } else if (filters?.status) {
+      where.status = filters.status as PrismaOrderStatus;
+    }
+
+    if (filters?.search) {
+      const q = filters.search.trim();
+      where.OR = [
+        { id: { contains: q, mode: 'insensitive' } },
+        { user: { email: { contains: q, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [total, actionableCount, deliveredCount, cancelledCount, items] =
+      await prisma.$transaction([
+        prisma.order.count({ where }),
+        prisma.order.count({ where: { status: { in: ['PAID', 'PROCESSING', 'SHIPPED'] } } }),
+        prisma.order.count({ where: { status: 'DELIVERED' } }),
+        prisma.order.count({ where: { status: { in: ['CANCELLED', 'PENDING'] } } }),
+        prisma.order.findMany({
+          where,
+          select: {
+            id: true,
+            total: true,
+            status: true,
+            createdAt: true,
+            user: { select: { id: true, email: true } },
+            items: { select: { quantity: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+      ]);
+
+    return {
+      items,
+      total,
+      actionableCount,
+      deliveredCount,
+      cancelledCount,
+      page,
+      pageSize,
+    };
   }
 
   async getOrderForUser(userId: string, orderId: string) {
@@ -339,184 +370,6 @@ export class PrismaOrderingAdapter implements OrderingStorage {
         user: { select: { id: true, email: true } },
         items: { select: { quantity: true } },
       },
-    });
-  }
-
-  async listAdminUsers(
-    pagination: Pagination,
-    filters?: UserFilters
-  ): Promise<PaginatedAdminUsers> {
-    const { page, pageSize } = pagination;
-    const where: Prisma.UserWhereInput = {};
-
-    if (filters?.role) {
-      where.role = filters.role as PrismaRole;
-    }
-
-    if (filters?.search) {
-      where.email = { contains: filters.search.trim(), mode: 'insensitive' };
-    }
-
-    const [total, adminCount, userCount, items] = await prisma.$transaction([
-      prisma.user.count({ where }),
-      prisma.user.count({ where: { role: 'ADMIN' } }),
-      prisma.user.count({ where: { role: 'USER' } }),
-      prisma.user.findMany({
-        where,
-        select: {
-          id: true,
-          email: true,
-          role: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-    ]);
-
-    return {
-      items: items.map((user) => ({
-        ...user,
-        role: user.role as 'USER' | 'ADMIN',
-      })),
-      total,
-      adminCount,
-      userCount,
-      page,
-      pageSize,
-    };
-  }
-
-  async updateUserRole(
-    targetUserId: string,
-    actingUserId: string,
-    newRole: 'USER' | 'ADMIN'
-  ): Promise<AdminUserItem> {
-    if (targetUserId === actingUserId && newRole !== 'ADMIN') {
-      throw new Error('Cannot remove own admin role');
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: targetUserId } });
-    if (!user) throw new Error('User not found');
-
-    const updated = await prisma.user.update({
-      where: { id: targetUserId },
-      data: { role: newRole as PrismaRole },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        createdAt: true,
-      },
-    });
-
-    return {
-      ...updated,
-      role: updated.role as 'USER' | 'ADMIN',
-    };
-  }
-
-  async listAddresses(userId: string): Promise<SavedAddress[]> {
-    return prisma.address.findMany({
-      where: { userId },
-      orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
-    });
-  }
-
-  async createAddress(userId: string, input: AddressInput): Promise<SavedAddress> {
-    const existingCount = await prisma.address.count({ where: { userId } });
-    const isDefault = input.isDefault ?? existingCount === 0;
-
-    if (isDefault) {
-      await prisma.address.updateMany({
-        where: { userId },
-        data: { isDefault: false },
-      });
-    }
-
-    return prisma.address.create({
-      data: {
-        userId,
-        name: input.name,
-        street: input.street,
-        city: input.city,
-        state: input.state,
-        zip: input.zip,
-        country: input.country || 'US',
-        isDefault,
-      },
-    });
-  }
-
-  async updateAddress(
-    userId: string,
-    addressId: string,
-    input: Partial<AddressInput>
-  ): Promise<SavedAddress> {
-    const address = await prisma.address.findFirst({
-      where: { id: addressId, userId },
-    });
-    if (!address) throw new Error('Address not found');
-
-    if (input.isDefault) {
-      await prisma.address.updateMany({
-        where: { userId },
-        data: { isDefault: false },
-      });
-    }
-
-    return prisma.address.update({
-      where: { id: addressId },
-      data: {
-        ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.street !== undefined ? { street: input.street } : {}),
-        ...(input.city !== undefined ? { city: input.city } : {}),
-        ...(input.state !== undefined ? { state: input.state } : {}),
-        ...(input.zip !== undefined ? { zip: input.zip } : {}),
-        ...(input.country !== undefined ? { country: input.country } : {}),
-        ...(input.isDefault !== undefined ? { isDefault: input.isDefault } : {}),
-      },
-    });
-  }
-
-  async deleteAddress(userId: string, addressId: string): Promise<void> {
-    const address = await prisma.address.findFirst({
-      where: { id: addressId, userId },
-    });
-    if (!address) throw new Error('Address not found');
-
-    await prisma.address.delete({ where: { id: addressId } });
-
-    // If the deleted address was default, promote the most recent one
-    if (address.isDefault) {
-      const nextAddress = await prisma.address.findFirst({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-      });
-      if (nextAddress) {
-        await prisma.address.update({
-          where: { id: nextAddress.id },
-          data: { isDefault: true },
-        });
-      }
-    }
-  }
-
-  async setDefaultAddress(userId: string, addressId: string): Promise<SavedAddress> {
-    const address = await prisma.address.findFirst({
-      where: { id: addressId, userId },
-    });
-    if (!address) throw new Error('Address not found');
-
-    await prisma.address.updateMany({
-      where: { userId },
-      data: { isDefault: false },
-    });
-
-    return prisma.address.update({
-      where: { id: addressId },
-      data: { isDefault: true },
     });
   }
 
