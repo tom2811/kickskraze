@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "auth-development-439e4",
+    "production": "auth-development-439e4"
+  }
+}
