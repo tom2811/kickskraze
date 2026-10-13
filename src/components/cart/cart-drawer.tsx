@@ -18,23 +18,28 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 z-40"
+        className="fixed inset-0 bg-black/40 backdrop-blur-xs z-40"
         onClick={onClose}
       />
 
       {/* Drawer */}
-      <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white border-l-2 border-black z-50 flex flex-col">
+      <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white border-l border-black z-50 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b-2 border-black">
-          <h2 className="text-xs font-mono uppercase tracking-widest font-bold text-black">
-            Cart ({itemCount})
-          </h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-black bg-neutral-50">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-black/40">
+              Shopping Cart // Inventory
+            </p>
+            <h2 className="text-xs font-mono uppercase tracking-widest font-bold text-black">
+              Cart ({itemCount} {itemCount === 1 ? 'item' : 'items'})
+            </h2>
+          </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-black hover:text-white transition-colors text-xs font-mono uppercase tracking-widest font-bold"
+            className="px-2 py-1 border border-black hover:bg-black hover:text-white transition-colors text-xs font-mono uppercase tracking-widest font-bold"
             aria-label="Close cart"
           >
-            Close
+            [ CLOSE ✕ ]
           </button>
         </div>
 
@@ -64,17 +69,17 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
         {/* Footer */}
         {items.length > 0 && (
-          <div className="border-t-2 border-black px-6 py-4 space-y-3 bg-white">
-            <div className="flex items-center justify-between font-mono text-sm">
+          <div className="border-t border-black px-6 py-4 space-y-3 bg-neutral-50">
+            <div className="flex items-center justify-between font-mono text-xs">
               <span className="text-[10px] uppercase tracking-widest text-black/50 font-bold">Subtotal</span>
-              <span className="font-black text-base">${total.toFixed(2)}</span>
+              <span className="font-bold text-sm">${total.toFixed(2)}</span>
             </div>
             <Link
               href="/cart"
               onClick={onClose}
-              className="block w-full text-center px-6 py-3 bg-black text-white border-2 border-black text-[10px] font-mono uppercase font-bold tracking-widest hover:bg-white hover:text-black transition-colors"
+              className="block w-full text-center px-6 py-3 bg-black text-white border border-black text-xs font-mono uppercase font-bold tracking-widest hover:bg-neutral-800 transition-colors"
             >
-              View cart &amp; checkout
+              View Cart &amp; Checkout
             </Link>
             <button
               onClick={onClose}

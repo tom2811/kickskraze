@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useProduct } from '@/hooks/use-products';
 import { useCart } from '@/hooks/use-cart';
 import { ProductImage } from '@/components/ui';
+import { ProductAssistantDrawer } from '@/components/products/product-assistant-drawer';
 
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -123,6 +124,12 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               ? 'Out of Stock'
               : 'Add to Cart'}
           </button>
+
+          <ProductAssistantDrawer
+            productId={product.id}
+            productName={`${product.brand} ${product.name}`}
+            selectedSize={selectedSize}
+          />
 
 
 
