@@ -186,7 +186,7 @@ export function GlobalAssistantDrawer({
               {isLoading && (
                 <div className="p-3.5 border border-black/20 bg-neutral-50 mr-8 font-mono text-xs animate-pulse">
                   <span className="text-[10px] uppercase tracking-widest text-black/40">
-                    // Nexus is searching &amp; thinking...
+                    {'// Nexus is searching & thinking...'}
                   </span>
                 </div>
               )}
