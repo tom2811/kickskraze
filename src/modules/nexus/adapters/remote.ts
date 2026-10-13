@@ -28,26 +28,34 @@ export class RemoteNexusAdapter implements AssistantProvider {
     if (input.size) payload.size = input.size;
     if (input.productContext) payload.product_context = input.productContext;
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(60000),
-    });
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(90000), // Increased to 90 seconds
+      });
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error(`Nexus Bot query failed with status ${res.status}: ${errText}`);
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        throw new Error(`Nexus Bot query failed with status ${res.status}: ${errText}`);
+      }
+
+      const data = await res.json();
+
+      return {
+        answer: data.answer || 'No response from assistant.',
+        routeType: data.route_type || 'direct',
+        ragUsed: Boolean(data.rag_used),
+        toolsUsed: Array.isArray(data.tools_used) ? data.tools_used : [],
+        sources: Array.isArray(data.sources) ? data.sources : [],
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        // Add more context to the error
+        throw new Error(`Nexus Bot connection failed: ${error.message}`);
+      }
+      throw error;
     }
-
-    const data = await res.json();
-
-    return {
-      answer: data.answer || 'No response from assistant.',
-      routeType: data.route_type || 'direct',
-      ragUsed: Boolean(data.rag_used),
-      toolsUsed: Array.isArray(data.tools_used) ? data.tools_used : [],
-      sources: Array.isArray(data.sources) ? data.sources : [],
-    };
   }
 }

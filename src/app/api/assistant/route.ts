@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
+    console.error('Assistant query failed:', error instanceof Error ? error.message : error);
     return apiError(error, 'Failed to query assistant');
   }
 }
