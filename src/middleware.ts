@@ -6,13 +6,6 @@ function isAdminOnlyPath(pathname: string) {
   return pathname.startsWith('/admin');
 }
 
-function isStorePath(pathname: string) {
-  if (pathname === '/') return true;
-  return ['/products', '/cart', '/checkout', '/orders', '/profile'].some((path) =>
-    pathname.startsWith(path)
-  );
-}
-
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,

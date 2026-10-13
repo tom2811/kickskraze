@@ -1,18 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useProducts } from '@/hooks/use-products';
 import ProductCard from './product-card';
 import { Pager } from '@/components/ui';
 
 export function ProductGrid({ filters }: { filters?: { brand?: string; search?: string } }) {
+  const filterKey = `${filters?.brand || ''}-${filters?.search || ''}`;
   const [page, setPage] = useState(1);
+  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
   const pageSize = 24;
-  const { data, isLoading } = useProducts({ ...filters, page, pageSize });
 
-  useEffect(() => {
-    setPage(1);
-  }, [filters?.brand, filters?.search]);
+  // Reset page when filters change
+  if (filterKey !== lastFilterKey) {
+    setLastFilterKey(filterKey);
+    if (page !== 1) setPage(1);
+  }
+  
+  const { data, isLoading } = useProducts({ ...filters, page, pageSize });
 
   if (isLoading) {
     return (

@@ -52,21 +52,21 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       return;
     }
 
-    if (user) {
-      fetchOrder();
-    }
-  }, [user, authLoading, id, router]);
+    if (!user) return;
 
-  const fetchOrder = async () => {
-    try {
-      const data = await apiFetch<Order>(`/api/orders/${id}`, undefined, 'Order not found');
-      setOrder(data);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Order not found');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchOrder = async () => {
+      try {
+        const data = await apiFetch<Order>(`/api/orders/${id}`, undefined, 'Order not found');
+        setOrder(data);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Order not found');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrder();
+  }, [user, authLoading, router, id]);
 
   if (authLoading || loading) {
     return <PageSkeleton />;
