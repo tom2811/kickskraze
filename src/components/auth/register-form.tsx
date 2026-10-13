@@ -77,11 +77,11 @@ export function RegisterForm() {
             Check your email
           </h2>
           <p className="text-xs font-mono text-black/60">
-            We've sent a confirmation link to <strong>{email}</strong>
+            We&apos;ve sent a confirmation link to <strong>{email}</strong>
           </p>
         </div>
         <p className="text-[10px] font-mono uppercase tracking-widest text-black/40">
-          Didn't receive it?{' '}
+          Didn&apos;t receive it?{' '}
           <button
             onClick={() => setEmailSent(false)}
             className="text-black font-bold underline underline-offset-2 hover:bg-black hover:text-white transition-colors"
