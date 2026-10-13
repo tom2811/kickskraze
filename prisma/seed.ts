@@ -114,9 +114,10 @@ async function main() {
         },
       });
       console.log(`✓ ${sneaker.name} - ${sneaker.colorway}`);
-    } catch (e: any) {
-      if (e.code !== 'P2002') {
-        console.log(`✗ ${sneaker.sku}: ${e.message}`);
+    } catch (e: unknown) {
+      if (e && typeof e === 'object' && 'code' in e && e.code !== 'P2002') {
+        const message = 'message' in e && typeof e.message === 'string' ? e.message : 'Unknown error';
+        console.log(`✗ ${sneaker.sku}: ${message}`);
       }
     }
   }

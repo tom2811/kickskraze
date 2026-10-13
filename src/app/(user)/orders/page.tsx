@@ -30,17 +30,14 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [fetchingOrders, setFetchingOrders] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      if (!authLoading) setLoading(false);
-      return;
-    }
+    if (!user) return;
 
     let cancelled = false;
     const fetchOrders = async () => {
-      setLoading(true);
+      setFetchingOrders(true);
       try {
         const data = await apiFetch<{ items?: Order[]; total?: number }>(
           `/api/orders?page=${page}&pageSize=${PAGE_SIZE}`,
@@ -53,7 +50,7 @@ export default function OrdersPage() {
       } catch (error) {
         console.error('Failed to fetch orders:', error);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setFetchingOrders(false);
       }
     };
 
@@ -61,7 +58,9 @@ export default function OrdersPage() {
     return () => {
       cancelled = true;
     };
-  }, [user, authLoading, page]);
+  }, [user, page]);
+
+  const loading = authLoading || fetchingOrders;
 
   if (authLoading || loading) {
     return <PageSkeleton />;
