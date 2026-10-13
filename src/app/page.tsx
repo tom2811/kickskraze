@@ -1,7 +1,20 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { ButtonLink } from '@/components/ui';
 import { Header } from '@/components/layout/header';
 
 export default function Home() {
+  const searchParams = useSearchParams();
+  
+  useEffect(() => {
+    if (searchParams.get('verified') === 'true') {
+      toast.success('Email verified! Welcome to Kickskraze.');
+    }
+  }, [searchParams]);
+
   return (
     <div className="min-h-screen flex flex-col bg-white text-black">
       <Header />

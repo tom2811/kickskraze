@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
 import { Button, TextField } from '@/components/ui';
+import { toast } from 'sonner';
 
 export function RegisterForm() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export function RegisterForm() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,27 +35,63 @@ export function RegisterForm() {
 
     try {
       const supabase = createClient();
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             name,
           },
+          emailRedirectTo: `${window.location.origin}/api/auth/callback`,
         },
       });
 
       if (signUpError) throw signUpError;
 
-      await fetch('/api/session');
-      router.push('/');
-      router.refresh();
+      // Check if email confirmation is required
+      if (data?.user && !data.session) {
+        // Email confirmation required
+        setEmailSent(true);
+        toast.success('Confirmation email sent! Check your inbox to verify your account.');
+      } else if (data?.session) {
+        // Auto-confirmed (shouldn't happen in production with email confirmation enabled)
+        await fetch('/api/session');
+        toast.success('Account created successfully!');
+        router.push('/');
+        router.refresh();
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create account');
+      toast.error('Failed to create account');
     } finally {
       setLoading(false);
     }
   };
+
+  if (emailSent) {
+    return (
+      <div className="space-y-5 text-center">
+        <div className="p-6 border border-black bg-green-50">
+          <div className="text-4xl mb-4">📧</div>
+          <h2 className="text-sm font-mono uppercase font-bold tracking-widest mb-2">
+            Check your email
+          </h2>
+          <p className="text-xs font-mono text-black/60">
+            We've sent a confirmation link to <strong>{email}</strong>
+          </p>
+        </div>
+        <p className="text-[10px] font-mono uppercase tracking-widest text-black/40">
+          Didn't receive it?{' '}
+          <button
+            onClick={() => setEmailSent(false)}
+            className="text-black font-bold underline underline-offset-2 hover:bg-black hover:text-white transition-colors"
+          >
+            Try again
+          </button>
+        </p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
