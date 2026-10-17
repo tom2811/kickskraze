@@ -10,6 +10,43 @@ const assistantQuerySchema = z.object({
   size: z.string().optional(),
 });
 
+const STOPWORDS = new Set([
+  'is', 'are', 'do', 'does', 'you', 'have', 'has', 'the', 'a', 'an', 'this',
+  'that', 'these', 'those', 'in', 'stock', 'available', 'availability', 'size',
+  'sizes', 'of', 'for', 'it', 'any', 'and', 'or', 'to', 'can', 'i', 'get',
+  'buy', 'price', 'cost', 'how', 'much', 'what', 'which', 'on', 'with',
+]);
+
+function toProductContext(product: {
+  name: string;
+  brand: string;
+  colorway: string;
+  retailPrice: number;
+  variants: Array<{ size: string; stock: number }>;
+}) {
+  const availableSizes = product.variants
+    .filter((v) => v.stock > 0)
+    .map((v) => v.size);
+
+  return {
+    name: product.name,
+    brand: product.brand,
+    colorway: product.colorway,
+    retailPrice: product.retailPrice,
+    availableSizes,
+    inStock: availableSizes.length > 0,
+  };
+}
+
+function extractSearchTerm(message: string): string | null {
+  const words = message
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w && !STOPWORDS.has(w) && !/^\d+(?:\.\d+)?$/.test(w));
+  return words.join(' ').trim() || null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -19,19 +56,18 @@ export async function POST(req: NextRequest) {
 
     if (productId) {
       const product = await catalog.getById(productId);
-      if (product) {
-        const availableSizes = product.variants
-          .filter((v) => v.stock > 0)
-          .map((v) => v.size);
-
-        productContext = {
-          name: product.name,
-          brand: product.brand,
-          colorway: product.colorway,
-          retailPrice: product.retailPrice,
-          availableSizes,
-          inStock: availableSizes.length > 0,
-        };
+      if (product) productContext = toProductContext(product);
+    } else {
+      const search = extractSearchTerm(message);
+      if (search) {
+        const { items } = await catalog.searchProducts(
+          { search },
+          { page: 1, pageSize: 1 }
+        );
+        if (items[0]) {
+          const product = await catalog.getById(items[0].id);
+          if (product) productContext = toProductContext(product);
+        }
       }
     }
 
