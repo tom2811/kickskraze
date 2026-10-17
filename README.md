@@ -1,17 +1,16 @@
 # Kickskraze
 
-A high-concurrency sneaker marketplace built with Next.js 16, Supabase, PostgreSQL, and Stripe. Engineered around **Deep Module Architecture** to strictly separate business domains from HTTP adapters, and hardened with **transactional stock reservation** to prevent inventory race conditions during high-demand product drops.
+A high-concurrency sneaker marketplace built with Next.js 16, Supabase, PostgreSQL, and Stripe. Engineered around **Deep Module Architecture** to keep business domains separate from HTTP adapters, and hardened with **transactional stock reservation** to prevent overselling during high-demand drops.
 
 ---
 
-## Technical Highlights
+## Highlights
 
-- **Atomic Stock Reservation:** Eliminates overselling race conditions by locking and decrementing stock within a PostgreSQL transaction at checkout initiation, with automated release on Stripe session expiration.
-- **Deep Module Architecture:** Domain logic in `catalog`, `ordering`, `identity`, and `nexus` modules behind explicit storage seams. HTTP handlers never import Prisma directly.
-- **Optimistic Cart UI:** TanStack Query `onMutate` optimistic updates provide instant UI feedback with automated rollback on failure.
-- **Efficient Queries:** PostgreSQL composite indexes enable fast order queries by status, user, and date for admin dashboard metrics.
-- **Admin RBAC:** Role-based access control with self-demotion guards and order management queues.
-- **AI Assistant:** Shopping assistant powered by external Nexus bot service (Groq LLM + ChromaDB RAG).
+- **Atomic stock reservation** — stock is locked and decremented inside a PostgreSQL transaction at checkout, with automatic release on Stripe session expiry. No overselling.
+- **Deep Module Architecture** — `catalog`, `ordering`, `identity`, and `nexus` domains behind explicit storage seams; HTTP handlers never touch Prisma directly.
+- **Optimistic cart** — TanStack Query `onMutate` updates with automated rollback on failure.
+- **Admin RBAC** — role-based access with self-demotion guards and order management queues.
+- **AI assistant** — storefront assistant backed by an external Nexus bot (resilient Groq/Ollama LLM chain + ChromaDB RAG), with a catalog-search fallback when no product is selected.
 
 ---
 
@@ -38,7 +37,7 @@ flowchart TD
     OrderingModule --> PaymentSeam["PaymentGateway"]
     IdentityModule --> IdentitySeam["IdentityStorage"]
     NexusModule --> AssistantSeam["AssistantProvider"]
-    
+
     CatalogSeam --> PrismaCatalog["Prisma Adapter"]
     OrderingSeam --> PrismaOrdering["Prisma Adapter"]
     IdentitySeam --> PrismaIdentity["Prisma Adapter"]
@@ -66,52 +65,6 @@ flowchart TD
 
 ---
 
-## Atomic Stock Reservation
-
-Kickskraze prevents overselling during high-demand drops by reserving stock atomically during checkout:
-
-```mermaid
-sequenceDiagram
-  autonumber
-  actor Buyer
-  participant API as /api/checkout
-  participant Module as Ordering Module
-  participant DB as PostgreSQL
-  participant Stripe
-  participant Webhook as /api/webhooks/stripe
-
-  Buyer->>API: POST checkout
-  API->>Module: checkout(userId, address)
-  Module->>DB: BEGIN TRANSACTION
-  Module->>DB: UPDATE Variant SET stock = stock - 1<br/>WHERE id = ? AND stock >= ?
-  
-  alt Stock Available
-    DB-->>Module: count = 1
-    Module->>DB: INSERT Order (status: PENDING)
-    Module->>DB: COMMIT
-    Module->>Stripe: Create CheckoutSession
-    Stripe-->>Buyer: Redirect to Stripe
-    
-    alt Payment Success
-      Stripe->>Webhook: checkout.session.completed
-      Webhook->>Module: fulfillPaidOrder(orderId)
-      Module->>DB: UPDATE Order SET status = PAID
-    else Payment Expired
-      Stripe->>Webhook: checkout.session.expired
-      Webhook->>Module: cancelPendingOrder(orderId)
-      Module->>DB: UPDATE Variant SET stock = stock + 1
-      Module->>DB: UPDATE Order SET status = CANCELLED
-    end
-    
-  else No Stock
-    DB-->>Module: count = 0
-    Module->>DB: ROLLBACK
-    Module-->>Buyer: 400 Insufficient stock
-  end
-```
-
----
-
 ## Tech Stack
 
 | Layer | Technology |
@@ -125,70 +78,31 @@ sequenceDiagram
 | **Client State** | TanStack Query v5 |
 | **Styling** | Tailwind CSS 4 |
 | **Validation** | Zod |
-| **AI** | Nexus Bot (FastAPI + Groq LLM + ChromaDB) |
-
----
-
-## Project Structure
-
-```
-src/
-├── app/
-│   ├── (shop)/          # Storefront (products, cart, checkout)
-│   ├── (user)/          # Customer account (profile, addresses, orders)
-│   ├── admin/           # Console (metrics, products, inventory, orders, users)
-│   └── api/             # HTTP routes (auth + validation + module call)
-├── components/          # UI primitives (assistant, cart, layout, products)
-├── hooks/               # React hooks (useCart, useProducts)
-├── lib/                 # Utilities (auth, validation, clients)
-└── modules/             # Domain modules (catalog, ordering, identity, nexus)
-```
+| **AI** | Nexus Bot (FastAPI + resilient Groq/Ollama chain + ChromaDB RAG) |
 
 ---
 
 ## Local Setup
 
-### Prerequisites
-- Node.js 20+
-- PostgreSQL (Supabase)
-- Stripe account (test mode)
-
-### Installation
 ```bash
-# 1. Install dependencies
 npm install
-
-# 2. Configure .env.local
-cp .env.example .env.local
-# Add your Supabase, database, and Stripe test keys
-
-# 3. Setup database
-npx prisma db push
-npm run seed
-
-# 4. Create admin user
+cp .env.example .env.local      # Supabase, database, and Stripe test keys
+npx prisma db push && npm run seed
 npm run make-admin your-email@example.com
-
-# 5. Run dev server
 npm run dev
-
-# 6. Forward Stripe webhooks (separate terminal)
+# separate terminal
 stripe listen --forward-to localhost:3000/api/webhooks/stripe
 ```
 
-Visit [http://localhost:3000](http://localhost:3000)
-
----
-
-## Available Scripts
+The assistant talks to the Nexus bot over HTTP. Set `NEXUS_BOT_URL` and `NEXUS_BOT_API_KEY` in `.env.local`, or leave them empty to use the built-in mock.
 
 ```bash
-npm run dev          # Development server
-npm run build        # Production build
+npm run dev          # development server
+npm run build        # production build
 npm run lint         # ESLint
 npm run typecheck    # TypeScript check
-npm run seed         # Seed sample data
-npm run make-admin   # Promote user to admin
+npm run seed         # seed sample data
+npm run make-admin   # promote user to admin
 ```
 
 ---
@@ -197,7 +111,4 @@ npm run make-admin   # Promote user to admin
 
 🔗 **[View Live Site](https://kickskraze-lemon.vercel.app)**
 
-**Test Credentials:**
-- Use Stripe test card: `4242 4242 4242 4242` (any future date, any CVC)
-- Create an account to explore user features
-- Contact for admin demo access
+**Test credentials:** Stripe test card `4242 4242 4242 4242` (any future date, any CVC). Create an account to explore user features; contact for admin demo access.
